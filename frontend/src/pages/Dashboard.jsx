@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Zap, 
   TrendingUp, 
@@ -8,10 +8,10 @@ import {
   Sparkles, 
   Send, 
   Bot, 
-  ChevronRight,
-  AlertCircle
+  ChevronRight 
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { fetchDashboardData } from '../services/api';
 
 const energyData = [
   { time: '12 AM', actual: 3.2, predicted: 3.0 },
@@ -34,6 +34,16 @@ const pieData = [
 ];
 
 const Dashboard = () => {
+  const [dashboardData, setDashboardData] = useState(null);
+
+  useEffect(() => {
+    fetchDashboardData().then((data) => {
+      if (data) {
+        setDashboardData(data);
+      }
+    });
+  }, []);
+
   return (
     <div className="space-y-6 pb-12">
       {/* Page Header */}
@@ -42,7 +52,7 @@ const Dashboard = () => {
         <p className="text-sm text-slate-400">Welcome back! Here's your energy overview.</p>
       </div>
 
-      {/* Top 4 Stat Cards */}
+      {/* Top 4 Stat Cards (Connected with Backend) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 relative overflow-hidden">
           <div className="flex items-center justify-between mb-4">
@@ -52,8 +62,9 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-3xl font-extrabold text-slate-100">245</span>
-            <span className="text-sm font-semibold text-slate-400">kWh</span>
+            <span className="text-3xl font-extrabold text-slate-100">
+              {dashboardData ? dashboardData.current_usage : 'Loading...'}
+            </span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
             <ArrowUpRight className="w-4 h-4" />
@@ -69,8 +80,9 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-3xl font-extrabold text-slate-100">275</span>
-            <span className="text-sm font-semibold text-slate-400">kWh</span>
+            <span className="text-3xl font-extrabold text-slate-100">
+              {dashboardData ? dashboardData.next_forecast : 'Loading...'}
+            </span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-blue-400 font-medium">
             <ArrowUpRight className="w-4 h-4" />
@@ -86,7 +98,9 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-3xl font-extrabold text-slate-100">$34.56</span>
+            <span className="text-3xl font-extrabold text-slate-100">
+              {dashboardData ? dashboardData.estimated_bill : 'Loading...'}
+            </span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
             <ArrowUpRight className="w-4 h-4" />
@@ -102,7 +116,9 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-3xl font-extrabold text-slate-100">18%</span>
+            <span className="text-3xl font-extrabold text-slate-100">
+              {dashboardData ? dashboardData.potential_saving : 'Loading...'}
+            </span>
           </div>
           <div className="text-xs text-slate-400 font-medium">
             ~ $12.43 / month
