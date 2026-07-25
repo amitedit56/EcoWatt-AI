@@ -1,10 +1,33 @@
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import MainLayout from './layouts/MainLayout';
+
+// Pages Imports
+import Dashboard from './pages/Dashboard';
+import Forecast from './pages/Forecast';
+import Anomaly from './pages/Anomaly';
+import AIAssistant from './pages/AIAssistant';
+import Appliance from './pages/Appliance';
+import Savings from './pages/Savings';
+import Reports from './pages/Reports';
+import Upload from './pages/Upload';
+import Settings from './pages/Settings';
+
 function App() {
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-      <h1 className="text-5xl font-bold text-green-500">
-        EcoWatt AI ⚡
-      </h1>
-    </div>
+    <MainLayout>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/forecast" element={<Forecast />} />
+        <Route path="/anomaly" element={<Anomaly />} />
+        <Route path="/assistant" element={<AIAssistant />} />
+        <Route path="/appliance" element={<Appliance />} />
+        <Route path="/savings" element={<Savings />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/upload" element={<Upload />} />
+        <Route path="/settings" element={<Settings />} />
+      </Routes>
+    </MainLayout>
   );
 }
 
