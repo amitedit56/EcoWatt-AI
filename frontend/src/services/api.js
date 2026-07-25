@@ -49,6 +49,16 @@ export const fetchSavingsData = async () => {
   }
 };
 
+export const fetchReportsData = async () => {
+  try {
+    const response = await apiClient.get('/api/reports');
+    return response.data.reports;
+  } catch (error) {
+    console.error('Error fetching reports data:', error);
+    return [];
+  }
+};
+
 export const checkEnergyAnomaly = async (featureValues) => {
   try {
     const response = await apiClient.post('/api/detect-anomaly', { 

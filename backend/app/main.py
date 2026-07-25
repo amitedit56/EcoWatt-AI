@@ -1,9 +1,14 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import joblib
 import os
 import numpy as np
+import io
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.pdfgen import canvas
 
 app = FastAPI(title="EcoWatt AI Backend with Trained Models", version="1.0")
 
@@ -52,6 +57,13 @@ live_anomaly_logs = [
     { "id": 1, "timestamp": "14 Jun 2024, 8:30 PM", "usage": "8.3 kWh", "severity": "danger", "reason": "AC Overuse Spike Detected", "status": "Unresolved" },
     { "id": 2, "timestamp": "10 Jun 2024, 11:15 PM", "usage": "7.1 kWh", "severity": "warning", "reason": "Unusual Night Activity", "status": "Reviewed" },
     { "id": 3, "timestamp": "05 Jun 2024, 2:00 PM", "usage": "9.5 kWh", "severity": "danger", "reason": "Simultaneous Heavy Appliances Running", "status": "Resolved" }
+]
+
+# Reports audit list data
+reports_audit_list = [
+    { "id": 1, "title": "June 2026 Monthly Energy Audit", "date": "01 Jul 2026", "size": "2.4 MB", "type": "PDF", "filename": "june_2026_audit.pdf" },
+    { "id": 2, "title": "May 2026 Consumption Summary", "date": "01 Jun 2026", "size": "1.8 MB", "type": "PDF", "filename": "may_2026_audit.pdf" },
+    { "id": 3, "title": "Q1 2026 Comprehensive Analytics", "date": "01 Apr 2026", "size": "5.1 MB", "type": "PDF", "filename": "q1_2026_audit.pdf" },
 ]
 
 
@@ -186,6 +198,99 @@ def get_anomalies_data():
 @app.get("/api/savings")
 def get_savings_data():
     return {
-        "total_potential_savings": "₹870 / month",
+        "total_potential_savings": "Rs. 870 / month",
         "active_tips_count": 4
     }
+
+
+@app.get("/api/reports")
+def get_reports_data():
+    return {
+        "status": "success",
+        "reports": reports_audit_list
+    }
+
+
+@app.get("/api/reports/download/{report_id}")
+def download_report_file(report_id: int):
+    report = next((r for r in reports_audit_list if r["id"] == report_id), reports_audit_list[0])
+    
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    
+    # Header Banner Background
+    p.setFillColor(colors.HexColor("#064e3b")) # Dark Emerald Green
+    p.rect(0, height - 100, width, 100, fill=1, stroke=0)
+    
+    # Header Title Text
+    p.setFillColor(colors.white)
+    p.setFont("Helvetica-Bold", 22)
+    p.drawString(40, height - 50, "EcoWatt AI")
+    p.setFont("Helvetica", 12)
+    p.drawString(40, height - 72, "Smart Energy & Power Audit Report")
+    
+    # Metadata Section Box
+    p.setFillColor(colors.HexColor("#f8fafc"))
+    p.setStrokeColor(colors.HexColor("#cbd5e1"))
+    p.roundRect(40, height - 210, width - 80, 85, 8, fill=1, stroke=1)
+    
+    p.setFillColor(colors.HexColor("#0f172a"))
+    p.setFont("Helvetica-Bold", 13)
+    p.drawString(55, height - 140, f"Report: {report['title']}")
+    
+    p.setFont("Helvetica", 11)
+    p.setFillColor(colors.HexColor("#475569"))
+    p.drawString(55, height - 165, f"Audit Date: {report['date']}")
+    p.drawString(280, height - 165, f"Format Type: {report['type']}")
+    p.drawString(55, height - 185, f"File Size: {report['size']}")
+    
+    # Section Heading
+    p.setFillColor(colors.HexColor("#064e3b"))
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(40, height - 260, "Executive Summary & Key Metrics")
+    
+    # Metrics Card Layout
+    p.setFillColor(colors.HexColor("#ecfdf5"))
+    p.setStrokeColor(colors.HexColor("#10b981"))
+    p.roundRect(40, height - 390, width - 80, 105, 8, fill=1, stroke=1)
+    
+    p.setFillColor(colors.HexColor("#064e3b"))
+    p.setFont("Helvetica-Bold", 11)
+    p.drawString(60, height - 310, "Total Power Consumed:")
+    p.setFont("Helvetica", 12)
+    p.setFillColor(colors.HexColor("#0f172a"))
+    p.drawString(240, height - 310, "245 kWh")
+    
+    p.setFillColor(colors.HexColor("#064e3b"))
+    p.setFont("Helvetica-Bold", 11)
+    p.drawString(60, height - 335, "Estimated Monthly Cost:")
+    p.setFont("Helvetica", 12)
+    p.setFillColor(colors.HexColor("#0f172a"))
+    p.drawString(240, height - 335, "Rs. 2,100")
+    
+    p.setFillColor(colors.HexColor("#064e3b"))
+    p.setFont("Helvetica-Bold", 11)
+    p.drawString(60, height - 360, "Potential Monthly Savings:")
+    p.setFont("Helvetica-Bold", 12)
+    p.setFillColor(colors.HexColor("#10b981"))
+    p.drawString(240, height - 360, "Rs. 870 / month")
+    
+    # Footer Notice
+    p.setStrokeColor(colors.HexColor("#e2e8f0"))
+    p.line(40, 70, width - 40, 70)
+    
+    p.setFillColor(colors.HexColor("#64748b"))
+    p.setFont("Helvetica-Oblique", 9)
+    p.drawString(40, 50, "Generated automatically by EcoWatt AI System. Confidential Energy Audit Document.")
+    
+    p.showPage()
+    p.save()
+    
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer, 
+        media_type="application/pdf", 
+        headers={"Content-Disposition": f"attachment; filename={report['filename']}"}
+    )
