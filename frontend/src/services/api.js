@@ -61,7 +61,6 @@ export const checkEnergyAnomaly = async (featureValues) => {
   }
 };
 
-// Naya function status update ke liye
 export const updateAnomalyStatus = async (id, status) => {
   try {
     const response = await apiClient.patch(`/api/anomalies/${id}/status`, { status });
@@ -78,6 +77,16 @@ export const fetchProphetForecast = async (days = 30) => {
     return response.data;
   } catch (error) {
     console.error('Error fetching prophet forecast:', error);
+    return null;
+  }
+};
+
+export const fetchAppliancesData = async () => {
+  try {
+    const response = await apiClient.get('/api/appliances');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching appliances data:', error);
     return null;
   }
 };

@@ -57,12 +57,11 @@ live_anomaly_logs = [
 
 # 2. Request Schema for Anomaly Detection (Isolation Forest)
 class AnomalyInput(BaseModel):
-    features: list[float]  # Jaise: [usage_kwh]
+    features: list[float]
 
 
 @app.post("/api/detect-anomaly")
 def detect_anomaly(data: AnomalyInput):
-    """Isolation Forest model se check karega ki data normal hai ya anomaly."""
     if anomaly_model is None:
         raise HTTPException(status_code=500, detail="Anomaly model not loaded on server.")
     
@@ -99,7 +98,6 @@ class StatusUpdateInput(BaseModel):
 
 @app.patch("/api/anomalies/{anomaly_id}/status")
 def update_anomaly_status(anomaly_id: int, data: StatusUpdateInput):
-    """Kisi specific anomaly ka status update karne ke liye ( jaise 'Resolved' )"""
     for item in live_anomaly_logs:
         if item["id"] == anomaly_id:
             item["status"] = data.status
@@ -130,6 +128,27 @@ def predict_forecast(data: ForecastInput):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# 5. Appliances Breakdown Endpoint (Real data with Rupees pricing)
+@app.get("/api/appliances")
+def get_appliances_data():
+    appliances_list = [
+        { "id": 1, "name": "Air Conditioner (Inverter)", "category": "Cooling", "power_rating": "1.5 kW", "daily_usage_hours": 6.5, "consumption_kwh": 9.75, "cost_inr": 82.87, "status": "Active" },
+        { "id": 2, "name": "Refrigerator (Double Door)", "category": "Kitchen", "power_rating": "0.3 kW", "daily_usage_hours": 24.0, "consumption_kwh": 7.20, "cost_inr": 61.20, "status": "Running" },
+        { "id": 3, "name": "Washing Machine", "category": "Laundry", "power_rating": "0.5 kW", "daily_usage_hours": 1.2, "consumption_kwh": 0.60, "cost_inr": 5.10, "status": "Standby" },
+        { "id": 4, "name": "Water Heater (Geyser)", "category": "Bathroom", "power_rating": "2.0 kW", "daily_usage_hours": 0.8, "consumption_kwh": 1.60, "cost_inr": 13.60, "status": "Off" },
+        { "id": 5, "name": "LED Lighting & Fans", "category": "General", "power_rating": "0.2 kW", "daily_usage_hours": 8.0, "consumption_kwh": 1.60, "cost_inr": 13.60, "status": "Active" },
+    ]
+    
+    total_consumption = sum(item["consumption_kwh"] for item in appliances_list)
+    total_cost = sum(item["cost_inr"] for item in appliances_list)
+    
+    return {
+        "total_daily_consumption_kwh": round(total_consumption, 2),
+        "total_daily_cost_inr": round(total_cost, 2),
+        "appliances": appliances_list
+    }
 
 
 @app.get("/api/dashboard")
