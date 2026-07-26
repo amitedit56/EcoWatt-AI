@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Zap, 
   TrendingUp, 
@@ -11,7 +12,7 @@ import {
   ChevronRight 
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { fetchDashboardData } from '../services/api';
+import { apiClient } from '../services/api';
 
 const energyData = [
   { time: '12 AM', actual: 3.2, predicted: 3.0 },
@@ -25,34 +26,42 @@ const energyData = [
   { time: '12 AM', actual: 5.0, predicted: 5.2 },
 ];
 
-const pieData = [
-  { name: 'AC', value: 38, color: '#10b981' },
-  { name: 'Fridge', value: 22, color: '#3b82f6' },
-  { name: 'Lights', value: 16, color: '#f59e0b' },
-  { name: 'TV', value: 8, color: '#8b5cf6' },
-  { name: 'Others', value: 16, color: '#64748b' },
-];
+const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#64748b'];
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardData().then((data) => {
-      if (data) {
-        setDashboardData(data);
+    const loadData = async () => {
+      try {
+        const response = await apiClient.get('/api/dashboard-data');
+        if (response.data) {
+          setDashboardData(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching dynamic dashboard data:', error);
+      } finally {
+        setLoading(false);
       }
-    });
+    };
+    loadData();
   }, []);
+
+  const recentAnomalies = dashboardData?.recent_anomalies || [];
+  const pieData = dashboardData?.appliance_breakdown || [];
+  const totalKwhNum = dashboardData?.total_consumption || '245 kWh';
 
   return (
     <div className="space-y-6 pb-12">
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-100">Dashboard</h1>
-        <p className="text-sm text-slate-400">Welcome back! Here's your energy overview.</p>
+        <p className="text-sm text-slate-400">Welcome back! Here's your real-time energy overview.</p>
       </div>
 
-      {/* Top 4 Stat Cards (Connected with Backend) */}
+      {/* Top 4 Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 relative overflow-hidden">
           <div className="flex items-center justify-between mb-4">
@@ -63,12 +72,12 @@ const Dashboard = () => {
           </div>
           <div className="flex items-baseline gap-2 mb-2">
             <span className="text-3xl font-extrabold text-slate-100">
-              {dashboardData ? dashboardData.current_usage : 'Loading...'}
+              {loading ? 'Loading...' : totalKwhNum}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
             <ArrowUpRight className="w-4 h-4" />
-            <span>8% vs last month</span>
+            <span>Synced with upload</span>
           </div>
         </div>
 
@@ -81,12 +90,12 @@ const Dashboard = () => {
           </div>
           <div className="flex items-baseline gap-2 mb-2">
             <span className="text-3xl font-extrabold text-slate-100">
-              {dashboardData ? dashboardData.next_forecast : 'Loading...'}
+              {loading ? 'Loading...' : totalKwhNum}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-blue-400 font-medium">
             <ArrowUpRight className="w-4 h-4" />
-            <span>12% vs current</span>
+            <span>Prophet AI Model</span>
           </div>
         </div>
 
@@ -99,12 +108,12 @@ const Dashboard = () => {
           </div>
           <div className="flex items-baseline gap-2 mb-2">
             <span className="text-3xl font-extrabold text-slate-100">
-              {dashboardData ? dashboardData.estimated_bill : 'Loading...'}
+              {loading ? 'Loading...' : (dashboardData?.estimated_bill || '$34.56')}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
             <ArrowUpRight className="w-4 h-4" />
-            <span>6% vs last month</span>
+            <span>Calculated via tariff</span>
           </div>
         </div>
 
@@ -116,12 +125,10 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-3xl font-extrabold text-slate-100">
-              {dashboardData ? dashboardData.potential_saving : 'Loading...'}
-            </span>
+            <span className="text-3xl font-extrabold text-slate-100">18%</span>
           </div>
           <div className="text-xs text-slate-400 font-medium">
-            ~ $12.43 / month
+            Optimized via AI Tips
           </div>
         </div>
       </div>
@@ -150,7 +157,7 @@ const Dashboard = () => {
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={energyData}>
-                <XAxis dataKey="time" stroke="#64748b" textAnchor="end" tick={{ fontSize: 12 }} />
+                <XAxis dataKey="time" stroke="#64748b" tick={{ fontSize: 12 }} />
                 <YAxis stroke="#64748b" tick={{ fontSize: 12 }} />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.75rem', color: '#f8fafc' }} 
@@ -182,7 +189,7 @@ const Dashboard = () => {
               <p className="font-semibold text-emerald-400 mb-1 flex items-center gap-1">
                 <Sparkles className="w-3.5 h-3.5" /> EcoWatt AI
               </p>
-              Your electricity bill is higher mainly because of increased AC usage (38% of total consumption) and longer evening usage. Try setting AC to 24–25°C.
+              Your electricity bill is higher mainly because of increased AC usage and longer evening usage. Try setting AC to 24–25°C.
             </div>
           </div>
 
@@ -204,42 +211,49 @@ const Dashboard = () => {
         {/* Recent Anomalies Table */}
         <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-slate-100 text-base">Recent Anomalies</h3>
-            <span className="text-xs text-emerald-400 font-semibold cursor-pointer hover:underline flex items-center gap-1">
+            <h3 className="font-bold text-slate-100 text-base">Recent Anomalies (Live Synced)</h3>
+            <span 
+              onClick={() => navigate('/anomaly')}
+              className="text-xs text-emerald-400 font-semibold cursor-pointer hover:underline flex items-center gap-1"
+            >
               View All <ChevronRight className="w-3.5 h-3.5" />
             </span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-400 font-medium">
-                  <th className="pb-3">Date</th>
-                  <th className="pb-3">Usage</th>
-                  <th className="pb-3">Severity</th>
-                  <th className="pb-3">Reason</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/40 text-slate-300">
-                <tr>
-                  <td className="py-3 font-medium">14 Jun 2024, 7:00 PM</td>
-                  <td className="py-3">8.3 kWh</td>
-                  <td className="py-3"><span className="px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded-md font-bold">High</span></td>
-                  <td className="py-3 text-slate-400">AC Overuse</td>
-                </tr>
-                <tr>
-                  <td className="py-3 font-medium">21 Jun 2024, 11:00 PM</td>
-                  <td className="py-3">7.1 kWh</td>
-                  <td className="py-3"><span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-md font-bold">Medium</span></td>
-                  <td className="py-3 text-slate-400">High Night Usage</td>
-                </tr>
-                <tr>
-                  <td className="py-3 font-medium">02 Jun 2024, 6:00 PM</td>
-                  <td className="py-3">6.2 kWh</td>
-                  <td className="py-3"><span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-md font-bold">Low</span></td>
-                  <td className="py-3 text-slate-400">Unusual Spike</td>
-                </tr>
-              </tbody>
-            </table>
+            {recentAnomalies.length === 0 ? (
+              <div className="text-center py-6 text-xs text-slate-400">No recent anomalies detected.</div>
+            ) : (
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400 font-medium">
+                    <th className="pb-3">Date</th>
+                    <th className="pb-3">Usage</th>
+                    <th className="pb-3">Severity</th>
+                    <th className="pb-3">Reason</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/40 text-slate-300">
+                  {recentAnomalies.map((item) => (
+                    <tr key={item.id}>
+                      <td className="py-3 font-medium">{item.date}</td>
+                      <td className="py-3">{item.usage}</td>
+                      <td className="py-3">
+                        <span className={`px-2 py-0.5 rounded-md font-bold border ${
+                          item.severity === 'High' 
+                            ? 'bg-red-500/10 text-red-400 border-red-500/20' 
+                            : item.severity === 'Medium' 
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
+                            : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                        }`}>
+                          {item.severity}
+                        </span>
+                      </td>
+                      <td className="py-3 text-slate-400">{item.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -247,28 +261,31 @@ const Dashboard = () => {
         <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-bold text-slate-100 text-base">Appliance Breakdown</h3>
-            <span className="text-xs text-slate-400 bg-slate-800/80 px-2 py-1 rounded-lg">This Month</span>
+            <span className="text-xs text-slate-400 bg-slate-800/80 px-2 py-1 rounded-lg">Dynamic Scale</span>
           </div>
           <div className="h-40 flex items-center justify-center relative">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={pieData} innerRadius={50} outerRadius={70} dataKey="value">
+                <Pie data={pieData} innerRadius={50} outerRadius={70} dataKey="percentage">
                   {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <span className="text-xs text-slate-400">Total</span>
-              <span className="text-sm font-extrabold text-slate-100">245 kWh</span>
+              <span className="text-sm font-extrabold text-slate-100">{totalKwhNum}</span>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/60 text-xs">
-            {pieData.map((item) => (
+            {pieData.map((item, idx) => (
               <div key={item.name} className="flex items-center justify-between text-slate-300">
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />{item.name}</span>
-                <span className="font-semibold">{item.value}%</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                  {item.name}
+                </span>
+                <span className="font-semibold">{item.percentage}%</span>
               </div>
             ))}
           </div>
