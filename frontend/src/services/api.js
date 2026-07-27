@@ -9,6 +9,45 @@ export const apiClient = axios.create({
   },
 });
 
+// Attach the saved JWT (if any) to every request, so protected routes work
+// automatically once you add auth checks to other endpoints later.
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('ecowatt_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Auth API calls — these hit the FastAPI backend (port 8000), same as everything
+// else in this app. There is no separate Node server; /api/auth/* is registered
+// directly in backend/app/main.py via app/api/auth.py.
+export const registerUser = async ({ fullName, email, password }) => {
+  const response = await apiClient.post('/api/auth/register', { fullName, email, password });
+  return response.data; // { token, user }
+};
+
+export const loginUser = async ({ email, password }) => {
+  const response = await apiClient.post('/api/auth/login', { email, password });
+  return response.data; // { token, user }
+};
+
+export const changePassword = async ({ currentPassword, newPassword }) => {
+  // Throws on failure (e.g. wrong current password) — caller should catch it.
+  const response = await apiClient.post('/api/auth/change-password', { currentPassword, newPassword });
+  return response.data;
+};
+
+// AI Assistant chat — talks to the FastAPI backend, which forwards to Groq.
+// `history` is an array of { role: 'user' | 'ai', text: '...' } from prior turns.
+export const sendAssistantMessage = async (message, history = []) => {
+  const response = await apiClient.post('/api/assistant/chat', {
+    message,
+    history: history.map((m) => ({ role: m.sender === 'user' ? 'user' : 'assistant', text: m.text })),
+  });
+  return response.data; // { reply }
+};
+
 export const fetchDashboardData = async () => {
   try {
     const response = await apiClient.get('/api/dashboard');
@@ -97,6 +136,27 @@ export const fetchAppliancesData = async () => {
     return response.data;
   } catch (error) {
     console.error('Error fetching appliances data:', error);
+    return null;
+  }
+};
+
+// Settings API integration functions
+export const fetchSettingsData = async () => {
+  try {
+    const response = await apiClient.get('/api/settings');
+    return response.data.settings;
+  } catch (error) {
+    console.error('Error fetching settings data:', error);
+    return null;
+  }
+};
+
+export const updateSettingsData = async (settingsData) => {
+  try {
+    const response = await apiClient.put('/api/settings', settingsData);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating settings data:', error);
     return null;
   }
 };

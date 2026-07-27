@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Zap, 
@@ -9,10 +9,11 @@ import {
   Sparkles, 
   Send, 
   Bot, 
-  ChevronRight 
+  ChevronRight,
+  Loader2
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { apiClient } from '../services/api';
+import { apiClient, sendAssistantMessage } from '../services/api';
 
 const energyData = [
   { time: '12 AM', actual: 3.2, predicted: 3.0 },
@@ -32,6 +33,53 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Mini AI Assistant widget state (separate small chat, lives only on this card)
+  const [chatMessages, setChatMessages] = useState([
+    { id: 1, sender: 'ai', text: 'Ask me anything about your energy usage!' },
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatThinking, setChatThinking] = useState(false);
+  const [chatError, setChatError] = useState('');
+  const chatContainerRef = useRef(null);
+  const isSendingRef = useRef(false);
+
+  useEffect(() => {
+    // Scroll only the chat box's own scroll container, never the outer page.
+    const container = chatContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [chatMessages, chatThinking]);
+
+  const handleNewChat = () => {
+    setChatMessages([{ id: 1, sender: 'ai', text: 'Ask me anything about your energy usage!' }]);
+    setChatError('');
+  };
+
+  const handleChatSend = async (e) => {
+    e.preventDefault();
+    const trimmed = chatInput.trim();
+    if (!trimmed || isSendingRef.current) return;
+    isSendingRef.current = true;
+
+    const userMessage = { id: Date.now(), sender: 'user', text: trimmed };
+    const updatedMessages = [...chatMessages, userMessage];
+    setChatMessages(updatedMessages);
+    setChatInput('');
+    setChatError('');
+    setChatThinking(true);
+
+    try {
+      const data = await sendAssistantMessage(trimmed, chatMessages);
+      setChatMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'ai', text: data.reply }]);
+    } catch (err) {
+      setChatError(err.response?.data?.detail || 'Could not reach the AI assistant.');
+    } finally {
+      setChatThinking(false);
+      isSendingRef.current = false;
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -136,7 +184,7 @@ const Dashboard = () => {
       {/* Main Charts & Widget Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Energy Consumption Line Chart */}
-        <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between h-[420px]">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-lg font-bold text-slate-100">Energy Consumption</h2>
@@ -170,39 +218,60 @@ const Dashboard = () => {
         </div>
 
         {/* AI Assistant Chat Card */}
-        <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-800/60">
+        <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between h-[420px]">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-800/60 shrink-0">
             <div className="flex items-center gap-2">
               <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
                 <Bot className="w-5 h-5" />
               </div>
               <span className="font-bold text-slate-200 text-sm">AI Assistant</span>
             </div>
-            <span className="text-xs text-emerald-400 font-semibold cursor-pointer hover:underline">New Chat</span>
+            <span onClick={handleNewChat} className="text-xs text-emerald-400 font-semibold cursor-pointer hover:underline">New Chat</span>
           </div>
 
-          <div className="py-4 space-y-3 flex-1 overflow-y-auto">
-            <div className="bg-slate-800/50 rounded-2xl p-3.5 max-w-[85%] text-xs text-slate-200 ml-auto border border-slate-700/50">
-              Why is my electricity bill high this month?
-            </div>
-            <div className="bg-slate-950/60 rounded-2xl p-3.5 max-w-[90%] text-xs text-slate-300 border border-slate-800">
-              <p className="font-semibold text-emerald-400 mb-1 flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5" /> EcoWatt AI
-              </p>
-              Your electricity bill is higher mainly because of increased AC usage and longer evening usage. Try setting AC to 24–25°C.
-            </div>
+          <div ref={chatContainerRef} className="py-4 space-y-3 flex-1 min-h-0 overflow-y-auto">
+            {chatMessages.map((msg) => (
+              msg.sender === 'user' ? (
+                <div key={msg.id} className="bg-slate-800/50 rounded-2xl p-3.5 max-w-[85%] text-xs text-slate-200 ml-auto border border-slate-700/50">
+                  {msg.text}
+                </div>
+              ) : (
+                <div key={msg.id} className="bg-slate-950/60 rounded-2xl p-3.5 max-w-[90%] text-xs text-slate-300 border border-slate-800">
+                  <p className="font-semibold text-emerald-400 mb-1 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5" /> EcoWatt AI
+                  </p>
+                  {msg.text}
+                </div>
+              )
+            ))}
+
+            {chatThinking && (
+              <div className="bg-slate-950/60 rounded-2xl p-3.5 max-w-[90%] text-xs text-slate-400 border border-slate-800 flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Thinking...
+              </div>
+            )}
+
+            {chatError && (
+              <div className="p-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-xs">
+                {chatError}
+              </div>
+            )}
+
           </div>
 
-          <div className="relative mt-2">
-            <input 
-              type="text" 
-              placeholder="Ask anything..." 
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-3 pr-10 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+          <form onSubmit={handleChatSend} className="relative mt-2">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Ask anything..."
+              disabled={chatThinking}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-3 pr-10 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 disabled:opacity-60"
             />
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-emerald-500 text-slate-950 rounded-lg hover:bg-emerald-400 transition-colors">
-              <Send className="w-3.5 h-3.5" />
+            <button type="submit" disabled={chatThinking} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-emerald-500 text-slate-950 rounded-lg hover:bg-emerald-400 transition-colors disabled:opacity-60">
+              {chatThinking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             </button>
-          </div>
+          </form>
         </div>
       </div>
 

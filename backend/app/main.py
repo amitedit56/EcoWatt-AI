@@ -12,7 +12,20 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 
+from app.core.database import Base, engine
+from app.models import user  # noqa: F401 - needed so SQLAlchemy knows about the User table
+from app.api.auth import router as auth_router
+from app.api.assistant import router as assistant_router
+
 app = FastAPI(title="EcoWatt AI Backend with Trained Models", version="1.0")
+
+# Create the users table (and any other tables) if they don't already exist
+Base.metadata.create_all(bind=engine)
+
+# Register the /api/auth/register and /api/auth/login routes
+app.include_router(auth_router)
+# Register the /api/assistant/chat route (real Groq-powered AI chat)
+app.include_router(assistant_router)
 
 # Enable CORS for frontend connection
 app.add_middleware(
@@ -77,6 +90,23 @@ reports_audit_list = [
     { "id": 3, "title": "Q1 2026 Comprehensive Analytics", "date": "01 Apr 2026", "size": "5.1 MB", "type": "PDF", "filename": "q1_2026_audit.pdf" },
 ]
 
+# In-memory storage for user settings
+user_settings = {
+    "profile": {
+        "fullName": "Amit Bind",
+        "email": "amit.bind@example.com",
+        "role": "AI Engineer"
+    },
+    "notifications": {
+        "emailAlerts": True,
+        "anomalyAlerts": True,
+        "weeklyReports": False
+    },
+    "security": {
+        "twoFactor": False
+    }
+}
+
 
 # 2. Flexible Request Schema for Anomaly Detection (Supports both list and float input)
 class AnomalyInput(BaseModel):
@@ -129,7 +159,29 @@ def update_anomaly_status(anomaly_id: int, data: StatusUpdateInput):
     raise HTTPException(status_code=404, detail="Anomaly not found")
 
 
-# 4. Request Schema for Prophet Forecasting
+# 4. Settings Endpoints
+@app.get("/api/settings")
+def get_settings():
+    return {"status": "success", "settings": user_settings}
+
+class SettingsUpdateInput(BaseModel):
+    profile: dict | None = None
+    notifications: dict | None = None
+    security: dict | None = None
+
+@app.put("/api/settings")
+def update_settings(data: SettingsUpdateInput):
+    if data.profile:
+        user_settings["profile"].update(data.profile)
+    if data.notifications:
+        user_settings["notifications"].update(data.notifications)
+    if data.security:
+        user_settings["security"].update(data.security)
+    
+    return {"status": "success", "message": "Settings updated successfully", "settings": user_settings}
+
+
+# 5. Request Schema for Prophet Forecasting
 class ForecastInput(BaseModel):
     periods: int = 30
 
@@ -164,7 +216,7 @@ def predict_forecast(data: ForecastInput):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# 5. Dataset Upload Endpoint with Full Feature Sync
+# 6. Dataset Upload Endpoint with Full Feature Sync
 @app.post("/api/upload")
 async def upload_dataset(file: UploadFile = File(...)):
     try:
@@ -220,7 +272,7 @@ async def upload_dataset(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# 6. Appliances Breakdown Endpoint with Dynamic Scaling
+# 7. Appliances Breakdown Endpoint with Dynamic Scaling
 @app.get("/api/appliances")
 def get_appliances_data():
     scale = latest_upload_metrics["scale_factor"]
