@@ -12,11 +12,12 @@ import {
   UploadCloud,
   Settings,
   LogOut,
-  Zap
+  Zap,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen = false, onClose = () => {} }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -39,49 +40,71 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="w-64 bg-[#0b1315] border-r border-slate-800/60 flex flex-col h-screen select-none">
-      <div className="p-4 border-b border-slate-800/60 flex items-center gap-3">
-        <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
-          <Zap className="w-6 h-6 fill-emerald-400/20" />
-        </div>
-        <div>
-          <h1 className="font-bold text-lg tracking-wide text-slate-100">EcoWatt <span className="text-emerald-400">AI</span></h1>
-          <p className="text-xs text-slate-400">Smart Energy. Better Tomorrow.</p>
-        </div>
-      </div>
+    <>
+      {/* Backdrop — only visible on mobile when the drawer is open */}
+      {isOpen && (
+        <div
+          onClick={onClose}
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+        />
+      )}
 
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  isActive
-                    ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20 font-semibold'
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
-                }`
-              }
-            >
-              <Icon className="w-5 h-5" />
-              <span>{item.label}</span>
-            </NavLink>
-          );
-        })}
-      </div>
+      <aside
+        className={`fixed md:static top-0 left-0 h-screen w-64 bg-[#0b1315] border-r border-slate-800/60 flex flex-col z-50 select-none transform transition-transform duration-300 ease-in-out ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        } md:translate-x-0`}
+      >
+        <div className="p-4 border-b border-slate-800/60 flex items-center gap-3">
+          <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
+            <Zap className="w-6 h-6 fill-emerald-400/20" />
+          </div>
+          <div className="flex-1">
+            <h1 className="font-bold text-lg tracking-wide text-slate-100">EcoWatt <span className="text-emerald-400">AI</span></h1>
+            <p className="text-xs text-slate-400">Smart Energy. Better Tomorrow.</p>
+          </div>
+          {/* Close button — mobile only */}
+          <button
+            onClick={onClose}
+            className="md:hidden p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-      <div className="p-4 border-t border-slate-800/60">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-3.5 py-2 w-full text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl text-sm font-medium transition-colors cursor-pointer"
-        >
-          <LogOut className="w-5 h-5" />
-          <span>Logout</span>
-        </button>
-      </div>
-    </aside>
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    isActive
+                      ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20 font-semibold'
+                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                  }`
+                }
+              >
+                <Icon className="w-5 h-5" />
+                <span>{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </div>
+
+        <div className="p-4 border-t border-slate-800/60">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3.5 py-2 w-full text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl text-sm font-medium transition-colors cursor-pointer"
+          >
+            <LogOut className="w-5 h-5" />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+    </>
   );
 };
 

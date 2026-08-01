@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, LogOut, AlertTriangle, CheckCircle2, Search, LayoutDashboard, TrendingUp, Bot, PieChart, Lightbulb, FileText, UploadCloud, Settings as SettingsIcon } from 'lucide-react';
+import { Bell, LogOut, AlertTriangle, CheckCircle2, Search, LayoutDashboard, TrendingUp, Bot, PieChart, Lightbulb, FileText, UploadCloud, Settings as SettingsIcon, Menu } from 'lucide-react';
 import { useAuth } from "../../App"; // Global Auth Context import kiya
 
 // Backend base URL - apni env file ke hisaab se badal lein agar zaroorat ho
@@ -20,7 +20,7 @@ const SEARCHABLE_PAGES = [
   { path: '/settings', label: 'Settings', icon: SettingsIcon },
 ];
 
-const Navbar = () => {
+const Navbar = ({ onMenuClick = () => {} }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -138,9 +138,18 @@ const Navbar = () => {
         .notif-scroll { scrollbar-width: thin; scrollbar-color: #334155 transparent; }
       `}</style>
 
-      {/* Search Bar */}
-      <div className="relative w-72" ref={searchRef}>
-        <form
+      {/* Left: Hamburger (mobile) + Search Bar */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onMenuClick}
+          className="md:hidden p-2.5 bg-slate-950 border border-slate-800 rounded-full text-slate-300 hover:text-emerald-400 transition-all shrink-0"
+        >
+          <Menu className="w-4 h-4" />
+        </button>
+
+        {/* Search Bar */}
+        <div className="relative w-40 sm:w-72" ref={searchRef}>
+          <form
           onSubmit={handleSearchSubmit}
           className="flex items-center bg-slate-950 border border-slate-800 rounded-full px-4 py-2 focus-within:border-emerald-500/60 transition-colors"
         >
@@ -203,6 +212,7 @@ const Navbar = () => {
             )}
           </div>
         )}
+      </div>
       </div>
 
       {/* Right Controls */}

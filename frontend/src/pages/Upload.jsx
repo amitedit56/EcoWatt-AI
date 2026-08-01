@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import PageHeader from '../components/ui/PageHeader';
 import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
 import { UploadCloud, FileSpreadsheet, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 
 const Upload = () => {
@@ -129,14 +128,19 @@ const Upload = () => {
         </p>
         
         <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
-          <Button variant="primary" onClick={() => fileInputRef.current.click()}>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current.click()}
+            className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm rounded-xl cursor-pointer transition-colors"
+          >
             Browse Files
-          </Button>
+          </button>
           {file && (
-            <Button 
-              variant="success" 
+            <button
+              type="button"
               onClick={handleUploadSubmit}
               disabled={uploading}
+              className="flex items-center px-5 py-2.5 bg-blue-500 hover:bg-blue-400 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl cursor-pointer transition-colors"
             >
               {uploading ? (
                 <>
@@ -145,7 +149,7 @@ const Upload = () => {
               ) : (
                 'Upload & Process'
               )}
-            </Button>
+            </button>
           )}
         </div>
       </Card>
