@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Sun, Moon, LogOut, AlertTriangle, CheckCircle2, Search, LayoutDashboard, TrendingUp, Bot, PieChart, Lightbulb, FileText, UploadCloud, Settings as SettingsIcon } from 'lucide-react';
+import { Bell, LogOut, AlertTriangle, CheckCircle2, Search, LayoutDashboard, TrendingUp, Bot, PieChart, Lightbulb, FileText, UploadCloud, Settings as SettingsIcon } from 'lucide-react';
 import { useAuth } from "../../App"; // Global Auth Context import kiya
 
 // Backend base URL - apni env file ke hisaab se badal lein agar zaroorat ho
@@ -21,7 +21,6 @@ const SEARCHABLE_PAGES = [
 ];
 
 const Navbar = () => {
-  const [darkMode, setDarkMode] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -120,11 +119,6 @@ const Navbar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const toggleTheme = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark', !darkMode);
-  };
-
   const handleLogout = () => {
     logout(); // Global state clear karke app ko instant logout karega
     setShowProfileMenu(false);
@@ -136,6 +130,14 @@ const Navbar = () => {
 
   return (
     <header className="flex items-center justify-between px-6 py-4 bg-slate-900/60 border-b border-slate-800/80 relative">
+      <style>{`
+        .notif-scroll::-webkit-scrollbar { width: 5px; }
+        .notif-scroll::-webkit-scrollbar-track { background: transparent; }
+        .notif-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+        .notif-scroll::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .notif-scroll { scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+      `}</style>
+
       {/* Search Bar */}
       <div className="relative w-72" ref={searchRef}>
         <form
@@ -218,7 +220,7 @@ const Navbar = () => {
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl p-4 z-50 text-xs space-y-3 max-h-96 overflow-y-auto">
+            <div className="notif-scroll absolute right-0 mt-2 w-80 bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl p-4 z-50 text-xs space-y-3 max-h-96 overflow-y-auto">
               <div className="flex items-center justify-between font-bold text-slate-200 border-b border-slate-800 pb-2 sticky top-0 bg-slate-950">
                 <span>Notifications</span>
                 <span className="text-emerald-400 text-[10px]">
@@ -280,15 +282,6 @@ const Navbar = () => {
             </div>
           )}
         </div>
-
-        {/* Theme Mode Toggle */}
-        <button 
-          onClick={toggleTheme}
-          className="p-2.5 bg-slate-950 border border-slate-800 rounded-full text-slate-300 hover:text-emerald-400 transition-all"
-          title="Toggle Dark/Light Mode"
-        >
-          {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </button>
 
         {/* Profile Section */}
         <div className="relative" ref={profileRef}>
