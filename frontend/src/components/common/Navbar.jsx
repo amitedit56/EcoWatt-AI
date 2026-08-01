@@ -1,10 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Sun, Moon, LogOut, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Bell, Sun, Moon, LogOut, AlertTriangle, CheckCircle2, Search, LayoutDashboard, TrendingUp, Bot, PieChart, Lightbulb, FileText, UploadCloud, Settings as SettingsIcon } from 'lucide-react';
 import { useAuth } from "../../App"; // Global Auth Context import kiya
 
 // Backend base URL - apni env file ke hisaab se badal lein agar zaroorat ho
 const API_BASE_URL = "http://localhost:8000";
+
+// Pages that the search bar can jump to directly
+const SEARCHABLE_PAGES = [
+  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/forecast', label: 'Forecast', icon: TrendingUp },
+  { path: '/anomaly', label: 'Anomaly Detection', icon: AlertTriangle },
+  { path: '/notifications', label: 'Notifications', icon: Bell },
+  { path: '/assistant', label: 'AI Assistant', icon: Bot },
+  { path: '/appliance', label: 'Appliance Breakdown', icon: PieChart },
+  { path: '/savings', label: 'Savings & Tips', icon: Lightbulb },
+  { path: '/reports', label: 'Reports', icon: FileText },
+  { path: '/upload', label: 'Data Upload', icon: UploadCloud },
+  { path: '/settings', label: 'Settings', icon: SettingsIcon },
+];
 
 const Navbar = () => {
   const [darkMode, setDarkMode] = useState(true);
@@ -14,6 +28,10 @@ const Navbar = () => {
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const { logout, user } = useAuth(); // Auth hook
   const navigate = useNavigate();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchRef = useRef(null);
 
   const notificationRef = useRef(null);
   const profileRef = useRef(null);
@@ -51,6 +69,31 @@ const Navbar = () => {
     }
   }, [showNotifications]);
 
+  // ---- Search bar ----
+  const query = searchQuery.trim().toLowerCase();
+  const matchedPages = query
+    ? SEARCHABLE_PAGES.filter((p) => p.label.toLowerCase().includes(query))
+    : [];
+  const matchedAlerts = query
+    ? notifications.filter((n) => (n.reason || '').toLowerCase().includes(query)).slice(0, 4)
+    : [];
+  const hasSearchResults = matchedPages.length > 0 || matchedAlerts.length > 0;
+
+  const goToPage = (path) => {
+    navigate(path);
+    setSearchQuery('');
+    setShowSearchResults(false);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (matchedPages.length > 0) {
+      goToPage(matchedPages[0].path);
+    } else if (matchedAlerts.length > 0) {
+      goToPage('/notifications');
+    }
+  };
+
   // Bahar click karne par dropdown band ho jaye
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -65,6 +108,12 @@ const Navbar = () => {
         !profileRef.current.contains(event.target)
       ) {
         setShowProfileMenu(false);
+      }
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target)
+      ) {
+        setShowSearchResults(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -88,13 +137,70 @@ const Navbar = () => {
   return (
     <header className="flex items-center justify-between px-6 py-4 bg-slate-900/60 border-b border-slate-800/80 relative">
       {/* Search Bar */}
-      <div className="flex items-center bg-slate-950 border border-slate-800 rounded-full px-4 py-2 w-72">
-        <input 
-          type="text" 
-          placeholder="Search energy metrics..." 
-          className="bg-transparent text-xs text-slate-200 focus:outline-none w-full"
-          autoComplete="off"
-        />
+      <div className="relative w-72" ref={searchRef}>
+        <form
+          onSubmit={handleSearchSubmit}
+          className="flex items-center bg-slate-950 border border-slate-800 rounded-full px-4 py-2 focus-within:border-emerald-500/60 transition-colors"
+        >
+          <Search className="w-3.5 h-3.5 text-slate-500 mr-2 shrink-0" />
+          <input
+            type="text"
+            placeholder="Search energy metrics..."
+            className="bg-transparent text-xs text-slate-200 focus:outline-none w-full"
+            autoComplete="off"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setShowSearchResults(true); }}
+            onFocus={() => setShowSearchResults(true)}
+          />
+        </form>
+
+        {showSearchResults && query && (
+          <div className="absolute left-0 mt-2 w-80 bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl p-2 z-50 text-xs max-h-80 overflow-y-auto">
+            {!hasSearchResults && (
+              <p className="text-slate-500 text-[11px] text-center py-4">
+                No matches for "{searchQuery}".
+              </p>
+            )}
+
+            {matchedPages.length > 0 && (
+              <div className="mb-1">
+                <p className="px-2 py-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Pages</p>
+                {matchedPages.map((page) => {
+                  const Icon = page.icon;
+                  return (
+                    <button
+                      key={page.path}
+                      onClick={() => goToPage(page.path)}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-slate-200 hover:bg-slate-900 transition-colors text-left"
+                    >
+                      <Icon className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      {page.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {matchedAlerts.length > 0 && (
+              <div>
+                <p className="px-2 py-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Anomaly Alerts</p>
+                {matchedAlerts.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => goToPage('/notifications')}
+                    className="w-full flex items-start gap-2.5 px-2.5 py-2 rounded-xl hover:bg-slate-900 transition-colors text-left"
+                  >
+                    <AlertTriangle className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${item.severity === 'danger' ? 'text-rose-400' : 'text-amber-400'}`} />
+                    <div className="min-w-0">
+                      <p className="text-slate-200 font-medium truncate">{item.reason}</p>
+                      <p className="text-slate-500 text-[10px]">{item.usage} • {item.timestamp}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Right Controls */}
