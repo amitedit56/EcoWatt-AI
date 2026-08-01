@@ -4,15 +4,16 @@ import {
   LayoutDashboard,
   TrendingUp,
   AlertTriangle,
+  Bell,
   Bot,
   PieChart,
   Lightbulb,
   FileText,
   UploadCloud,
   Settings,
-  LogOut
+  LogOut,
+  Zap
 } from 'lucide-react';
-import Logo from './Logo';
 import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = () => {
@@ -23,6 +24,7 @@ const Sidebar = () => {
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/forecast', label: 'Forecast', icon: TrendingUp },
     { path: '/anomaly', label: 'Anomaly Detection', icon: AlertTriangle },
+    { path: '/notifications', label: 'Notifications', icon: Bell },
     { path: '/assistant', label: 'AI Assistant', icon: Bot },
     { path: '/appliance', label: 'Appliance Breakdown', icon: PieChart },
     { path: '/savings', label: 'Savings & Tips', icon: Lightbulb },
@@ -38,8 +40,14 @@ const Sidebar = () => {
 
   return (
     <aside className="w-64 bg-[#0b1315] border-r border-slate-800/60 flex flex-col h-screen select-none">
-      <div className="p-4 border-b border-slate-800/60">
-        <Logo />
+      <div className="p-4 border-b border-slate-800/60 flex items-center gap-3">
+        <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
+          <Zap className="w-6 h-6 fill-emerald-400/20" />
+        </div>
+        <div>
+          <h1 className="font-bold text-lg tracking-wide text-slate-100">EcoWatt <span className="text-emerald-400">AI</span></h1>
+          <p className="text-xs text-slate-400">Smart Energy. Better Tomorrow.</p>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">

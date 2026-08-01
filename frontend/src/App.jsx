@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Dashboard from './pages/Dashboard';
 import Forecast from './pages/Forecast';
 import Anomaly from './pages/Anomaly';
+import Notifications from './pages/Notifications';
 import AIAssistant from './pages/AIAssistant';
 import Appliance from './pages/Appliance';
 import Savings from './pages/Savings';
@@ -51,6 +52,7 @@ function AppRoutes() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/forecast" element={<Forecast />} />
                 <Route path="/anomaly" element={<Anomaly />} />
+                <Route path="/notifications" element={<Notifications />} />
                 <Route path="/assistant" element={<AIAssistant />} />
                 <Route path="/appliance" element={<Appliance />} />
                 <Route path="/savings" element={<Savings />} />

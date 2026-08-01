@@ -5,6 +5,7 @@ import MainLayout from "@/layouts/MainLayout";
 import Dashboard from "@/pages/Dashboard";
 import Forecast from "@/pages/Forecast";
 import Anomaly from "@/pages/Anomaly";
+import Notifications from "@/pages/Notifications";
 import AIAssistant from "@/pages/AIAssistant";
 import Appliance from "@/pages/Appliance";
 import Reports from "@/pages/Reports";
@@ -17,6 +18,7 @@ export default function AppRoutes() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/forecast" element={<Forecast />} />
         <Route path="/anomaly" element={<Anomaly />} />
+        <Route path="/notifications" element={<Notifications />} />
         <Route path="/assistant" element={<AIAssistant />} />
         <Route path="/appliance" element={<Appliance />} />
         <Route path="/reports" element={<Reports />} />

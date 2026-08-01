@@ -16,6 +16,7 @@ class UserOut(BaseModel):
     id: int
     fullName: str
     email: EmailStr
+    avatarUrl: str | None = None
 
     class Config:
         from_attributes = True
@@ -24,6 +25,12 @@ class UserOut(BaseModel):
 class ChangePasswordRequest(BaseModel):
     currentPassword: str
     newPassword: str
+
+
+class UpdateProfileRequest(BaseModel):
+    fullName: str
+    email: EmailStr
+    avatarUrl: str | None = None
 
 
 class AuthResponse(BaseModel):

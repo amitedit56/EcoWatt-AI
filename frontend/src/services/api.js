@@ -38,6 +38,12 @@ export const changePassword = async ({ currentPassword, newPassword }) => {
   return response.data;
 };
 
+export const updateProfile = async ({ fullName, email, avatarUrl }) => {
+  // Throws on failure (e.g. email already taken) — caller should catch it.
+  const response = await apiClient.put('/api/auth/profile', { fullName, email, avatarUrl });
+  return response.data; // { id, fullName, email, avatarUrl }
+};
+
 // AI Assistant chat — talks to the FastAPI backend, which forwards to Groq.
 // `history` is an array of { role: 'user' | 'ai', text: '...' } from prior turns.
 export const sendAssistantMessage = async (message, history = []) => {

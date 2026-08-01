@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import hash_password, verify_password, create_access_token, decode_access_token
 from app.models.user import User
-from app.schemas.user import RegisterRequest, LoginRequest, AuthResponse, ChangePasswordRequest
+from app.schemas.user import RegisterRequest, LoginRequest, AuthResponse, ChangePasswordRequest, UpdateProfileRequest, UserOut
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -48,7 +48,7 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
 
     return {
         "token": token,
-        "user": {"id": new_user.id, "fullName": new_user.full_name, "email": new_user.email},
+        "user": {"id": new_user.id, "fullName": new_user.full_name, "email": new_user.email, "avatarUrl": new_user.avatar_url},
     }
 
 
@@ -62,7 +62,36 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
 
     return {
         "token": token,
-        "user": {"id": user.id, "fullName": user.full_name, "email": user.email},
+        "user": {"id": user.id, "fullName": user.full_name, "email": user.email, "avatarUrl": user.avatar_url},
+    }
+
+
+@router.put("/profile", response_model=UserOut)
+def update_profile(
+    data: UpdateProfileRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # Agar email badla ja raha hai, check karo ki wo kisi doosre user ne already use nahi kiya
+    if data.email != current_user.email:
+        existing = db.query(User).filter(User.email == data.email).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="This email is already in use by another account.")
+
+    current_user.full_name = data.fullName
+    current_user.email = data.email
+    if data.avatarUrl is not None:
+        current_user.avatar_url = data.avatarUrl
+    db.commit()
+    db.refresh(current_user)
+
+    # Return a plain dict (not the raw ORM object) so field names always line
+    # up with the response schema, regardless of the DB column naming.
+    return {
+        "id": current_user.id,
+        "fullName": current_user.full_name,
+        "email": current_user.email,
+        "avatarUrl": current_user.avatar_url,
     }
 
 
