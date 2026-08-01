@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -12,15 +12,24 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 
-from app.core.database import Base, engine
+from app.core.database import Base, engine, get_db, SessionLocal
+from app.core.migrations import run_auto_migrations
 from app.models import user  # noqa: F401 - needed so SQLAlchemy knows about the User table
-from app.api.auth import router as auth_router
+from app.models.user import User
+from app.models.dashboard_metrics import DashboardMetrics
+from app.api.auth import router as auth_router, get_current_user
 from app.api.assistant import router as assistant_router
+from sqlalchemy.orm import Session
 
 app = FastAPI(title="EcoWatt AI Backend with Trained Models", version="1.0")
 
 # Create the users table (and any other tables) if they don't already exist
 Base.metadata.create_all(bind=engine)
+
+# Add any columns that exist on the models but not yet in the actual DB
+# tables (e.g. after adding avatar_url, email_alerts, etc.) — without
+# deleting or touching existing data.
+run_auto_migrations(engine, Base)
 
 # Register the /api/auth/register and /api/auth/login routes
 app.include_router(auth_router)
@@ -74,7 +83,9 @@ live_anomaly_logs = [
     { "id": 3, "timestamp": "05 Jun 2024, 2:00 PM", "usage": "9.5 kWh", "severity": "danger", "reason": "Simultaneous Heavy Appliances Running", "status": "Resolved" }
 ]
 
-# Global dictionary to store latest uploaded file analytics & dynamic overrides
+# Global dictionary to store latest uploaded file analytics & dynamic overrides.
+# This acts as an in-memory cache that's loaded from (and written back to) the
+# `dashboard_metrics` DB table, so values survive a backend restart.
 latest_upload_metrics = {
     "total_consumption": "245 kWh",
     "estimated_bill": "$34.56",
@@ -82,6 +93,48 @@ latest_upload_metrics = {
     "status": "Default Dataset",
     "scale_factor": 1.0
 }
+
+
+def _load_metrics_from_db():
+    """Runs once at startup: pulls the saved row (if any) into the in-memory
+    cache above, or creates the default row on first-ever run."""
+    db = SessionLocal()
+    try:
+        row = db.query(DashboardMetrics).filter(DashboardMetrics.id == 1).first()
+        if row is None:
+            row = DashboardMetrics(id=1, **latest_upload_metrics)
+            db.add(row)
+            db.commit()
+            db.refresh(row)
+        latest_upload_metrics["total_consumption"] = row.total_consumption
+        latest_upload_metrics["estimated_bill"] = row.estimated_bill
+        latest_upload_metrics["weekly_prediction"] = row.weekly_prediction
+        latest_upload_metrics["status"] = row.status
+        latest_upload_metrics["scale_factor"] = row.scale_factor
+    finally:
+        db.close()
+
+
+def _save_metrics_to_db():
+    """Call this any time latest_upload_metrics changes, so the new values
+    survive the next restart."""
+    db = SessionLocal()
+    try:
+        row = db.query(DashboardMetrics).filter(DashboardMetrics.id == 1).first()
+        if row is None:
+            row = DashboardMetrics(id=1)
+            db.add(row)
+        row.total_consumption = latest_upload_metrics["total_consumption"]
+        row.estimated_bill = latest_upload_metrics["estimated_bill"]
+        row.weekly_prediction = latest_upload_metrics["weekly_prediction"]
+        row.status = latest_upload_metrics["status"]
+        row.scale_factor = latest_upload_metrics["scale_factor"]
+        db.commit()
+    finally:
+        db.close()
+
+
+_load_metrics_from_db()
 
 # Reports audit list data
 reports_audit_list = [
@@ -92,16 +145,6 @@ reports_audit_list = [
 
 # In-memory storage for user settings
 user_settings = {
-    "profile": {
-        "fullName": "Amit Bind",
-        "email": "amit.bind@example.com",
-        "role": "AI Engineer"
-    },
-    "notifications": {
-        "emailAlerts": True,
-        "anomalyAlerts": True,
-        "weeklyReports": False
-    },
     "security": {
         "twoFactor": False
     }
@@ -160,25 +203,60 @@ def update_anomaly_status(anomaly_id: int, data: StatusUpdateInput):
 
 
 # 4. Settings Endpoints
+# Notification preferences are stored per-user in the database (users table).
+# Only "security.twoFactor" remains a simple in-memory placeholder since that
+# feature isn't wired up to real 2FA logic yet.
 @app.get("/api/settings")
-def get_settings():
-    return {"status": "success", "settings": user_settings}
+def get_settings(current_user: User = Depends(get_current_user)):
+    return {
+        "status": "success",
+        "settings": {
+            "notifications": {
+                "emailAlerts": current_user.email_alerts,
+                "anomalyAlerts": current_user.anomaly_alerts,
+                "weeklyReports": current_user.weekly_reports,
+            },
+            "security": user_settings["security"],
+        },
+    }
+
 
 class SettingsUpdateInput(BaseModel):
-    profile: dict | None = None
     notifications: dict | None = None
     security: dict | None = None
 
+
 @app.put("/api/settings")
-def update_settings(data: SettingsUpdateInput):
-    if data.profile:
-        user_settings["profile"].update(data.profile)
+def update_settings(
+    data: SettingsUpdateInput,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     if data.notifications:
-        user_settings["notifications"].update(data.notifications)
+        if "emailAlerts" in data.notifications:
+            current_user.email_alerts = bool(data.notifications["emailAlerts"])
+        if "anomalyAlerts" in data.notifications:
+            current_user.anomaly_alerts = bool(data.notifications["anomalyAlerts"])
+        if "weeklyReports" in data.notifications:
+            current_user.weekly_reports = bool(data.notifications["weeklyReports"])
+        db.commit()
+        db.refresh(current_user)
+
     if data.security:
         user_settings["security"].update(data.security)
-    
-    return {"status": "success", "message": "Settings updated successfully", "settings": user_settings}
+
+    return {
+        "status": "success",
+        "message": "Settings updated successfully",
+        "settings": {
+            "notifications": {
+                "emailAlerts": current_user.email_alerts,
+                "anomalyAlerts": current_user.anomaly_alerts,
+                "weeklyReports": current_user.weekly_reports,
+            },
+            "security": user_settings["security"],
+        },
+    }
 
 
 # 5. Request Schema for Prophet Forecasting
@@ -261,6 +339,7 @@ async def upload_dataset(file: UploadFile = File(...)):
         latest_upload_metrics["weekly_prediction"] = f"{weekly_pred_val:,.1f} kWh"
         latest_upload_metrics["status"] = f"Processed {file.filename}"
         latest_upload_metrics["scale_factor"] = scale_factor
+        _save_metrics_to_db()
 
         return {
             "status": "success",

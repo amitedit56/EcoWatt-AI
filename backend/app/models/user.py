@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.sql import func
 from app.core.database import Base
 
@@ -11,4 +11,8 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     avatar_url = Column(String, nullable=True)
+    # Per-user notification preferences (Settings > Notifications tab)
+    email_alerts = Column(Boolean, nullable=False, default=True)
+    anomaly_alerts = Column(Boolean, nullable=False, default=True)
+    weekly_reports = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
