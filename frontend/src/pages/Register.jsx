@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Mail, Lock, ArrowRight } from 'lucide-react';
-import { registerUser } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { registerUser, googleAuth } from '../services/api';
+import GoogleSignInButton from '../components/common/GoogleSignInButton';
 
 const Register = () => {
   const [formData, setFormData] = useState({ fullName: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -23,6 +26,20 @@ const Register = () => {
     } catch (err) {
       const message = err.response?.data?.detail || 'Cannot connect to backend server. Make sure FastAPI is running on port 8000.';
       setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleCredential = async (credential) => {
+    setError('');
+    setLoading(true);
+    try {
+      const data = await googleAuth(credential);
+      login(data.token, data.user);
+      navigate('/', { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Google sign-in failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -58,7 +75,7 @@ const Register = () => {
                 required
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                placeholder="Amit Bind"
+                placeholder="Name"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -73,7 +90,7 @@ const Register = () => {
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="amitbind1080k@gmail.com"
+                placeholder="your_gmail@gmail.com"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -102,6 +119,14 @@ const Register = () => {
             {loading ? 'Creating Account...' : success ? 'Redirecting...' : 'Create Account'} <ArrowRight className="w-4 h-4" />
           </button>
         </form>
+
+        <div className="flex items-center gap-3 my-6">
+          <div className="flex-1 h-px bg-slate-800" />
+          <span className="text-[10px] text-slate-500 uppercase tracking-wide">Or</span>
+          <div className="flex-1 h-px bg-slate-800" />
+        </div>
+
+        <GoogleSignInButton onCredential={handleGoogleCredential} onError={setError} />
 
         <p className="text-center text-xs text-slate-400 mt-6">
           Already have an account?{' '}

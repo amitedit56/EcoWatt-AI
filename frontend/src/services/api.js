@@ -44,6 +44,21 @@ export const updateProfile = async ({ fullName, email, avatarUrl }) => {
   return response.data; // { id, fullName, email, avatarUrl }
 };
 
+export const forgotPassword = async (email) => {
+  const response = await apiClient.post('/api/auth/forgot-password', { email });
+  return response.data; // { status, message }
+};
+
+export const resetPassword = async ({ token, newPassword }) => {
+  const response = await apiClient.post('/api/auth/reset-password', { token, newPassword });
+  return response.data; // { status, message }
+};
+
+export const googleAuth = async (credential) => {
+  const response = await apiClient.post('/api/auth/google', { credential });
+  return response.data; // { token, user }
+};
+
 // AI Assistant chat — talks to the FastAPI backend, which forwards to Groq.
 // `history` is an array of { role: 'user' | 'ai', text: '...' } from prior turns.
 export const sendAssistantMessage = async (message, history = []) => {

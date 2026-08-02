@@ -16,6 +16,8 @@ import Upload from './pages/Upload';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // Re-export useAuth from here too, so any existing pages that still do
 // `import { useAuth } from '../App'` keep working without extra edits.
@@ -40,6 +42,14 @@ function AppRoutes() {
       <Route
         path="/register"
         element={!isAuthenticated ? <Register /> : <Navigate to="/" replace />}
+      />
+      <Route
+        path="/forgot-password"
+        element={!isAuthenticated ? <ForgotPassword /> : <Navigate to="/" replace />}
+      />
+      <Route
+        path="/reset-password/:token"
+        element={!isAuthenticated ? <ResetPassword /> : <Navigate to="/" replace />}
       />
 
       {/* Protected Dashboard Routes */}

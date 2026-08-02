@@ -33,6 +33,20 @@ class UpdateProfileRequest(BaseModel):
     avatarUrl: str | None = None
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    newPassword: str
+
+
+class GoogleAuthRequest(BaseModel):
+    # The ID token returned by Google's "Sign in with Google" button on the frontend
+    credential: str
+
+
 class AuthResponse(BaseModel):
     token: str
     user: UserOut
