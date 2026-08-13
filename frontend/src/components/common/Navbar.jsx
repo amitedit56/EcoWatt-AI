@@ -2,9 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, LogOut, AlertTriangle, CheckCircle2, Search, LayoutDashboard, TrendingUp, Bot, PieChart, Lightbulb, FileText, UploadCloud, Settings as SettingsIcon, Menu } from 'lucide-react';
 import { useAuth } from "../../App"; // Global Auth Context import kiya
-
-// Backend base URL - apni env file ke hisaab se badal lein agar zaroorat ho
-const API_BASE_URL = "http://localhost:8000";
+import { fetchAnomaliesData } from '../../services/api';
 
 // Pages that the search bar can jump to directly
 const SEARCHABLE_PAGES = [
@@ -40,14 +38,12 @@ const Navbar = ({ onMenuClick = () => {} }) => {
     (n) => n.status === "Unresolved"
   ).length;
 
-  // Backend se real anomalies fetch karna
+  // Backend se real anomalies fetch karna (apiClient auto-attaches auth token)
   const fetchNotifications = async () => {
     try {
       setLoadingNotifications(true);
-      const res = await fetch(`${API_BASE_URL}/api/anomalies`);
-      if (!res.ok) throw new Error("Failed to fetch anomalies");
-      const data = await res.json();
-      setNotifications(data.anomalies_list || []);
+      const data = await fetchAnomaliesData();
+      setNotifications(data?.anomalies_list || []);
     } catch (err) {
       console.error("Notification fetch error:", err);
       setNotifications([]);

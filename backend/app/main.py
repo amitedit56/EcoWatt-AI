@@ -8,6 +8,7 @@ import shutil
 import numpy as np
 import pandas as pd
 import io
+from datetime import datetime
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
@@ -17,6 +18,8 @@ from app.core.migrations import run_auto_migrations
 from app.models import user  # noqa: F401 - needed so SQLAlchemy knows about the User table
 from app.models.user import User
 from app.models.dashboard_metrics import DashboardMetrics
+from app.models.anomaly_log import AnomalyLog
+from app.models.upload_history import UploadHistory
 from app.api.auth import router as auth_router, get_current_user
 from app.api.assistant import router as assistant_router
 from sqlalchemy.orm import Session
@@ -76,74 +79,35 @@ def read_root():
     return {"message": "EcoWatt AI Backend is running with custom ML models!"}
 
 
-# In-memory storage for live dynamic anomaly logs and metrics override
-live_anomaly_logs = [
-    { "id": 1, "timestamp": "14 Jun 2024, 8:30 PM", "usage": "8.3 kWh", "severity": "danger", "reason": "AC Overuse Spike Detected", "status": "Unresolved" },
-    { "id": 2, "timestamp": "10 Jun 2024, 11:15 PM", "usage": "7.1 kWh", "severity": "warning", "reason": "Unusual Night Activity", "status": "Reviewed" },
-    { "id": 3, "timestamp": "05 Jun 2024, 2:00 PM", "usage": "9.5 kWh", "severity": "danger", "reason": "Simultaneous Heavy Appliances Running", "status": "Resolved" }
-]
+# ---------------------------------------------------------------------------
+# Per-user data helpers
+#
+# Everything below used to live in global in-memory variables shared by every
+# user of the app (a serious bug — one user could see/edit another user's
+# anomalies, dashboard numbers, and upload history). Now every value is
+# looked up from the database, scoped to the logged-in user's id.
+# ---------------------------------------------------------------------------
 
-# Global dictionary to store latest uploaded file analytics & dynamic overrides.
-# This acts as an in-memory cache that's loaded from (and written back to) the
-# `dashboard_metrics` DB table, so values survive a backend restart.
-latest_upload_metrics = {
+DEFAULT_METRICS = {
     "total_consumption": "245 kWh",
     "estimated_bill": "$34.56",
     "weekly_prediction": "1,450 kWh",
     "status": "Default Dataset",
-    "scale_factor": 1.0
+    "scale_factor": 1.0,
 }
 
 
-def _load_metrics_from_db():
-    """Runs once at startup: pulls the saved row (if any) into the in-memory
-    cache above, or creates the default row on first-ever run."""
-    db = SessionLocal()
-    try:
-        row = db.query(DashboardMetrics).filter(DashboardMetrics.id == 1).first()
-        if row is None:
-            row = DashboardMetrics(id=1, **latest_upload_metrics)
-            db.add(row)
-            db.commit()
-            db.refresh(row)
-        latest_upload_metrics["total_consumption"] = row.total_consumption
-        latest_upload_metrics["estimated_bill"] = row.estimated_bill
-        latest_upload_metrics["weekly_prediction"] = row.weekly_prediction
-        latest_upload_metrics["status"] = row.status
-        latest_upload_metrics["scale_factor"] = row.scale_factor
-    finally:
-        db.close()
-
-
-def _save_metrics_to_db():
-    """Call this any time latest_upload_metrics changes, so the new values
-    survive the next restart."""
-    db = SessionLocal()
-    try:
-        row = db.query(DashboardMetrics).filter(DashboardMetrics.id == 1).first()
-        if row is None:
-            row = DashboardMetrics(id=1)
-            db.add(row)
-        row.total_consumption = latest_upload_metrics["total_consumption"]
-        row.estimated_bill = latest_upload_metrics["estimated_bill"]
-        row.weekly_prediction = latest_upload_metrics["weekly_prediction"]
-        row.status = latest_upload_metrics["status"]
-        row.scale_factor = latest_upload_metrics["scale_factor"]
+def _get_or_create_metrics(db: Session, user_id: int) -> DashboardMetrics:
+    row = db.query(DashboardMetrics).filter(DashboardMetrics.user_id == user_id).first()
+    if row is None:
+        row = DashboardMetrics(user_id=user_id, **DEFAULT_METRICS)
+        db.add(row)
         db.commit()
-    finally:
-        db.close()
+        db.refresh(row)
+    return row
 
 
-_load_metrics_from_db()
-
-# Reports audit list data
-reports_audit_list = [
-    { "id": 1, "title": "June 2026 Monthly Energy Audit", "date": "01 Jul 2026", "size": "2.4 MB", "type": "PDF", "filename": "june_2026_audit.pdf" },
-    { "id": 2, "title": "May 2026 Consumption Summary", "date": "01 Jun 2026", "size": "1.8 MB", "type": "PDF", "filename": "may_2026_audit.pdf" },
-    { "id": 3, "title": "Q1 2026 Comprehensive Analytics", "date": "01 Apr 2026", "size": "5.1 MB", "type": "PDF", "filename": "q1_2026_audit.pdf" },
-]
-
-# In-memory storage for user settings
+# In-memory storage for the (not-yet-real) 2FA toggle placeholder
 user_settings = {
     "security": {
         "twoFactor": False
@@ -157,29 +121,34 @@ class AnomalyInput(BaseModel):
 
 
 @app.post("/api/detect-anomaly")
-def detect_anomaly(data: AnomalyInput):
+def detect_anomaly(
+    data: AnomalyInput,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     if anomaly_model is None:
         raise HTTPException(status_code=500, detail="Anomaly model not loaded on server.")
-    
+
     try:
         feature_vals = data.features if isinstance(data.features, list) else [data.features, 0.0, 0.0]
         input_df = pd.DataFrame([feature_vals])
         prediction = anomaly_model.predict(input_df)
-        
+
         is_anomaly = bool(prediction[0] == -1)
         message = "Anomaly detected! Unusual power spike." if is_anomaly else "Normal energy usage."
-        
+
         if is_anomaly:
-            new_log = {
-                "id": len(live_anomaly_logs) + 1,
-                "timestamp": "Just now",
-                "usage": f"{feature_vals[0]} kWh",
-                "severity": "danger",
-                "reason": "Live Isolation Forest Model Spike",
-                "status": "Unresolved"
-            }
-            live_anomaly_logs.insert(0, new_log)
-        
+            new_log = AnomalyLog(
+                user_id=current_user.id,
+                timestamp="Just now",
+                usage=f"{feature_vals[0]} kWh",
+                severity="danger",
+                reason="Live Isolation Forest Model Spike",
+                status="Unresolved",
+            )
+            db.add(new_log)
+            db.commit()
+
         return {
             "status": "success",
             "is_anomaly": is_anomaly,
@@ -194,12 +163,20 @@ class StatusUpdateInput(BaseModel):
     status: str
 
 @app.patch("/api/anomalies/{anomaly_id}/status")
-def update_anomaly_status(anomaly_id: int, data: StatusUpdateInput):
-    for item in live_anomaly_logs:
-        if item["id"] == anomaly_id:
-            item["status"] = data.status
-            return {"status": "success", "message": "Status updated successfully"}
-    raise HTTPException(status_code=404, detail="Anomaly not found")
+def update_anomaly_status(
+    anomaly_id: int,
+    data: StatusUpdateInput,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    item = db.query(AnomalyLog).filter(
+        AnomalyLog.id == anomaly_id, AnomalyLog.user_id == current_user.id
+    ).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Anomaly not found")
+    item.status = data.status
+    db.commit()
+    return {"status": "success", "message": "Status updated successfully"}
 
 
 # 4. Settings Endpoints
@@ -265,18 +242,35 @@ class ForecastInput(BaseModel):
 
 
 @app.post("/api/predict-forecast")
-def predict_forecast(data: ForecastInput):
+def predict_forecast(
+    data: ForecastInput,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     if prophet_model is None:
         raise HTTPException(status_code=500, detail="Prophet model not loaded on server.")
-    
+
+    metrics = _get_or_create_metrics(db, current_user.id)
+
+    # New users (or anyone who hasn't uploaded a dataset yet) shouldn't see
+    # a forecast at all — the underlying Prophet model is generic/pre-trained,
+    # not tied to any real user's data, so showing it before an upload would
+    # be misleading demo data pretending to be personalized.
+    if metrics.status == "Default Dataset":
+        return {
+            "status": "success",
+            "has_data": False,
+            "forecast_data": [],
+        }
+
     try:
         future = prophet_model.make_future_dataframe(periods=data.periods)
         forecast = prophet_model.predict(future)
-        
+
         result_subset = forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(data.periods).copy()
-        
+
         try:
-            scale_factor = latest_upload_metrics["scale_factor"]
+            scale_factor = metrics.scale_factor
             if scale_factor != 1.0:
                 result_subset['yhat'] = result_subset['yhat'] * (scale_factor * 0.1)
                 result_subset['yhat_lower'] = result_subset['yhat_lower'] * (scale_factor * 0.1)
@@ -285,9 +279,10 @@ def predict_forecast(data: ForecastInput):
             pass
 
         forecast_list = result_subset.to_dict(orient="records")
-        
+
         return {
             "status": "success",
+            "has_data": True,
             "forecast_data": forecast_list
         }
     except Exception as e:
@@ -296,13 +291,20 @@ def predict_forecast(data: ForecastInput):
 
 # 6. Dataset Upload Endpoint with Full Feature Sync
 @app.post("/api/upload")
-async def upload_dataset(file: UploadFile = File(...)):
+async def upload_dataset(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     try:
-        os.makedirs("uploads", exist_ok=True)
-        save_path = os.path.join("uploads", file.filename)
+        # Store each user's uploads in their own subfolder so filenames
+        # never collide between different accounts.
+        user_upload_dir = os.path.join("uploads", str(current_user.id))
+        os.makedirs(user_upload_dir, exist_ok=True)
+        save_path = os.path.join(user_upload_dir, file.filename)
         with open(save_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-            
+
         total_kwh = 245.0
         if file.filename.endswith('.csv'):
             df = pd.read_csv(save_path)
@@ -310,7 +312,7 @@ async def upload_dataset(file: UploadFile = File(...)):
             df = pd.read_excel(save_path)
         else:
             df = None
-            
+
         if df is not None:
             numeric_cols = df.select_dtypes(include=[np.number]).columns
             if len(numeric_cols) > 0:
@@ -318,44 +320,92 @@ async def upload_dataset(file: UploadFile = File(...)):
                 total_kwh = round(float(col_data.sum()), 2)
                 if total_kwh == 0:
                     total_kwh = 310.5
-                
+
                 max_val = float(col_data.max()) if len(col_data) > 0 else 0
                 if max_val > (col_data.mean() * 2.0) if len(col_data) > 0 else False:
-                    new_anomaly = {
-                        "id": len(live_anomaly_logs) + 1,
-                        "timestamp": "Just now (From Upload)",
-                        "usage": f"{round(max_val, 2)} kWh",
-                        "severity": "danger",
-                        "reason": f"High Peak Spike detected in {file.filename}",
-                        "status": "Unresolved"
-                    }
-                    live_anomaly_logs.insert(0, new_anomaly)
-            
+                    new_anomaly = AnomalyLog(
+                        user_id=current_user.id,
+                        timestamp="Just now (From Upload)",
+                        usage=f"{round(max_val, 2)} kWh",
+                        severity="danger",
+                        reason=f"High Peak Spike detected in {file.filename}",
+                        status="Unresolved",
+                    )
+                    db.add(new_anomaly)
+
         scale_factor = total_kwh / 245.0 if total_kwh != 245.0 else 1.0
         weekly_pred_val = round(total_kwh * 4.2, 2)
-        
-        latest_upload_metrics["total_consumption"] = f"{total_kwh} kWh"
-        latest_upload_metrics["estimated_bill"] = f"Rs. {int(total_kwh * 8.5)}"
-        latest_upload_metrics["weekly_prediction"] = f"{weekly_pred_val:,.1f} kWh"
-        latest_upload_metrics["status"] = f"Processed {file.filename}"
-        latest_upload_metrics["scale_factor"] = scale_factor
-        _save_metrics_to_db()
+
+        metrics = _get_or_create_metrics(db, current_user.id)
+        metrics.total_consumption = f"{total_kwh} kWh"
+        metrics.estimated_bill = f"Rs. {int(total_kwh * 8.5)}"
+        metrics.weekly_prediction = f"{weekly_pred_val:,.1f} kWh"
+        metrics.status = f"Processed {file.filename}"
+        metrics.scale_factor = scale_factor
+
+        history_entry = UploadHistory(
+            user_id=current_user.id,
+            filename=file.filename,
+            upload_date=datetime.now().strftime("%d %b %Y"),
+            size=f"{os.path.getsize(save_path) / (1024 * 1024):.1f} MB",
+            status="Processed",
+            total_consumption=metrics.total_consumption,
+            estimated_bill=metrics.estimated_bill,
+        )
+        db.add(history_entry)
+        db.commit()
 
         return {
             "status": "success",
             "filename": file.filename,
             "message": f"Dataset uploaded! Calculated total usage: {total_kwh} kWh",
-            "metrics": latest_upload_metrics
+            "metrics": {
+                "total_consumption": metrics.total_consumption,
+                "estimated_bill": metrics.estimated_bill,
+                "weekly_prediction": metrics.weekly_prediction,
+                "status": metrics.status,
+                "scale_factor": metrics.scale_factor,
+            },
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/upload-history")
+def get_upload_history(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(UploadHistory)
+        .filter(UploadHistory.user_id == current_user.id)
+        .order_by(UploadHistory.id.desc())
+        .all()
+    )
+    return {
+        "status": "success",
+        "history": [
+            {
+                "id": r.id,
+                "filename": r.filename,
+                "date": r.upload_date,
+                "size": r.size,
+                "status": r.status,
+            }
+            for r in rows
+        ],
+    }
+
+
 # 7. Appliances Breakdown Endpoint with Dynamic Scaling
 @app.get("/api/appliances")
-def get_appliances_data():
-    scale = latest_upload_metrics["scale_factor"]
-    
+def get_appliances_data(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    metrics = _get_or_create_metrics(db, current_user.id)
+    scale = metrics.scale_factor
+
     base_appliances = [
         { "id": 1, "name": "Air Conditioner (Inverter)", "category": "Cooling", "power_rating": "1.5 kW", "daily_usage_hours": 6.5, "consumption_kwh": 9.75, "cost_inr": 82.87, "status": "Active" },
         { "id": 2, "name": "Refrigerator (Double Door)", "category": "Kitchen", "power_rating": "0.3 kW", "daily_usage_hours": 24.0, "consumption_kwh": 7.20, "cost_inr": 61.20, "status": "Running" },
@@ -363,7 +413,7 @@ def get_appliances_data():
         { "id": 4, "name": "Water Heater (Geyser)", "category": "Bathroom", "power_rating": "2.0 kW", "daily_usage_hours": 0.8, "consumption_kwh": 1.60, "cost_inr": 13.60, "status": "Off" },
         { "id": 5, "name": "LED Lighting & Fans", "category": "General", "power_rating": "0.2 kW", "daily_usage_hours": 8.0, "consumption_kwh": 1.60, "cost_inr": 13.60, "status": "Active" },
     ]
-    
+
     appliances_list = []
     for item in base_appliances:
         scaled_kwh = round(item["consumption_kwh"] * scale, 2)
@@ -373,10 +423,10 @@ def get_appliances_data():
             "consumption_kwh": scaled_kwh,
             "cost_inr": scaled_cost
         })
-    
+
     total_consumption = sum(item["consumption_kwh"] for item in appliances_list)
     total_cost = sum(item["cost_inr"] for item in appliances_list)
-    
+
     return {
         "total_daily_consumption_kwh": round(total_consumption, 2),
         "total_daily_cost_inr": round(total_cost, 2),
@@ -385,29 +435,45 @@ def get_appliances_data():
 
 
 @app.get("/api/dashboard")
-def get_dashboard_data():
+def get_dashboard_data(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    metrics = _get_or_create_metrics(db, current_user.id)
     return {
-        "current_usage": latest_upload_metrics["total_consumption"],
-        "next_forecast": latest_upload_metrics["total_consumption"],
-        "estimated_bill": latest_upload_metrics["estimated_bill"],
+        "current_usage": metrics.total_consumption,
+        "next_forecast": metrics.total_consumption,
+        "estimated_bill": metrics.estimated_bill,
         "potential_saving": "18%"
     }
 
 
 @app.get("/api/dashboard-data")
-def get_full_dashboard_data():
-    recent_anomalies = []
-    for item in live_anomaly_logs[:3]:
-        recent_anomalies.append({
-            "id": item["id"],
-            "date": item["timestamp"],
-            "usage": item["usage"],
-            "severity": "High" if item["severity"] == "danger" else ("Medium" if item["severity"] == "warning" else "Low"),
-            "reason": item["reason"]
-        })
-        
-    scale = latest_upload_metrics["scale_factor"]
-    
+def get_full_dashboard_data(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    anomaly_rows = (
+        db.query(AnomalyLog)
+        .filter(AnomalyLog.user_id == current_user.id)
+        .order_by(AnomalyLog.id.desc())
+        .limit(3)
+        .all()
+    )
+    recent_anomalies = [
+        {
+            "id": item.id,
+            "date": item.timestamp,
+            "usage": item.usage,
+            "severity": "High" if item.severity == "danger" else ("Medium" if item.severity == "warning" else "Low"),
+            "reason": item.reason,
+        }
+        for item in anomaly_rows
+    ]
+
+    metrics = _get_or_create_metrics(db, current_user.id)
+    scale = metrics.scale_factor
+
     appliance_breakdown = [
         {"name": "AC", "percentage": 38, "kwh": round(93.1 * scale, 1)},
         {"name": "Fridge", "percentage": 22, "kwh": round(53.9 * scale, 1)},
@@ -418,40 +484,68 @@ def get_full_dashboard_data():
 
     return {
         "status": "success",
-        "total_consumption": latest_upload_metrics["total_consumption"],
-        "estimated_bill": latest_upload_metrics["estimated_bill"],
+        "total_consumption": metrics.total_consumption,
+        "estimated_bill": metrics.estimated_bill,
         "recent_anomalies": recent_anomalies,
         "appliance_breakdown": appliance_breakdown
     }
 
 
 @app.get("/api/forecast")
-def get_forecast_data():
+def get_forecast_data(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    metrics = _get_or_create_metrics(db, current_user.id)
     return {
-        "weekly_prediction": latest_upload_metrics["weekly_prediction"],
+        "has_data": metrics.status != "Default Dataset",
+        "weekly_prediction": metrics.weekly_prediction,
         "peak_day": "Wednesday",
         "confidence_score": "94%"
     }
 
 
 @app.get("/api/anomalies")
-def get_anomalies_data():
-    danger_count = sum(1 for item in live_anomaly_logs if item["severity"] == "danger")
-    resolved_count = sum(1 for item in live_anomaly_logs if item["status"] == "Resolved")
-    
+def get_anomalies_data(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(AnomalyLog)
+        .filter(AnomalyLog.user_id == current_user.id)
+        .order_by(AnomalyLog.id.desc())
+        .all()
+    )
+    danger_count = sum(1 for item in rows if item.severity == "danger")
+    resolved_count = sum(1 for item in rows if item.status == "Resolved")
+
     return {
-        "total_anomalies": len(live_anomaly_logs),
+        "total_anomalies": len(rows),
         "high_severity": danger_count,
         "resolved_issues": resolved_count,
-        "anomalies_list": live_anomaly_logs
+        "anomalies_list": [
+            {
+                "id": item.id,
+                "timestamp": item.timestamp,
+                "usage": item.usage,
+                "severity": item.severity,
+                "reason": item.reason,
+                "status": item.status,
+            }
+            for item in rows
+        ],
     }
 
 
 @app.get("/api/savings")
-def get_savings_data():
-    scale = latest_upload_metrics["scale_factor"]
+def get_savings_data(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    metrics = _get_or_create_metrics(db, current_user.id)
+    scale = metrics.scale_factor
     base_savings = int(870 * scale)
-    
+
     return {
         "total_potential_savings": f"Rs. {base_savings} / month",
         "active_tips_count": 4,
@@ -465,87 +559,129 @@ def get_savings_data():
 
 
 @app.get("/api/reports")
-def get_reports_data():
+def get_reports_data(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # Reports are now generated from the user's own uploaded datasets —
+    # no more shared hardcoded demo reports. Each upload becomes one
+    # downloadable audit report reflecting that upload's own numbers.
+    rows = (
+        db.query(UploadHistory)
+        .filter(UploadHistory.user_id == current_user.id)
+        .order_by(UploadHistory.id.desc())
+        .all()
+    )
     return {
         "status": "success",
-        "reports": reports_audit_list
+        "reports": [
+            {
+                "id": r.id,
+                "title": f"Energy Audit — {r.filename}",
+                "date": r.upload_date,
+                "size": r.size,
+                "type": "PDF",
+                "filename": f"ecowatt_audit_{r.id}.pdf",
+            }
+            for r in rows
+        ],
     }
 
 
 @app.get("/api/reports/download/{report_id}")
-def download_report_file(report_id: int):
-    report = next((r for r in reports_audit_list if r["id"] == report_id), reports_audit_list[0])
-    
+def download_report_file(
+    report_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    record = db.query(UploadHistory).filter(
+        UploadHistory.id == report_id, UploadHistory.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Report not found.")
+
+    report = {
+        "title": f"Energy Audit — {record.filename}",
+        "date": record.upload_date,
+        "type": "PDF",
+        "size": record.size,
+        "filename": f"ecowatt_audit_{record.id}.pdf",
+    }
+    # Fall back to the user's current metrics if this is an older row from
+    # before snapshots were captured per-upload.
+    total_consumption = record.total_consumption or _get_or_create_metrics(db, current_user.id).total_consumption
+    estimated_bill = record.estimated_bill or _get_or_create_metrics(db, current_user.id).estimated_bill
+
     buffer = io.BytesIO()
     p = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
-    
+
     p.setFillColor(colors.HexColor("#064e3b"))
     p.rect(0, height - 100, width, 100, fill=1, stroke=0)
-    
+
     p.setFillColor(colors.white)
     p.setFont("Helvetica-Bold", 22)
     p.drawString(40, height - 50, "EcoWatt AI")
     p.setFont("Helvetica", 12)
     p.drawString(40, height - 72, "Smart Energy & Power Audit Report")
-    
+
     p.setFillColor(colors.HexColor("#f8fafc"))
     p.setStrokeColor(colors.HexColor("#cbd5e1"))
     p.roundRect(40, height - 210, width - 80, 85, 8, fill=1, stroke=1)
-    
+
     p.setFillColor(colors.HexColor("#0f172a"))
     p.setFont("Helvetica-Bold", 13)
     p.drawString(55, height - 140, f"Report: {report['title']}")
-    
+
     p.setFont("Helvetica", 11)
     p.setFillColor(colors.HexColor("#475569"))
     p.drawString(55, height - 165, f"Audit Date: {report['date']}")
     p.drawString(280, height - 165, f"Format Type: {report['type']}")
     p.drawString(55, height - 185, f"File Size: {report['size']}")
-    
+
     p.setFillColor(colors.HexColor("#064e3b"))
     p.setFont("Helvetica-Bold", 14)
     p.drawString(40, height - 260, "Executive Summary & Key Metrics")
-    
+
     p.setFillColor(colors.HexColor("#ecfdf5"))
     p.setStrokeColor(colors.HexColor("#10b981"))
     p.roundRect(40, height - 390, width - 80, 105, 8, fill=1, stroke=1)
-    
+
     p.setFillColor(colors.HexColor("#064e3b"))
     p.setFont("Helvetica-Bold", 11)
     p.drawString(60, height - 310, "Total Power Consumed:")
     p.setFont("Helvetica", 12)
     p.setFillColor(colors.HexColor("#0f172a"))
-    p.drawString(240, height - 310, latest_upload_metrics["total_consumption"])
-    
+    p.drawString(240, height - 310, total_consumption)
+
     p.setFillColor(colors.HexColor("#064e3b"))
     p.setFont("Helvetica-Bold", 11)
     p.drawString(60, height - 335, "Estimated Monthly Cost:")
     p.setFont("Helvetica", 12)
     p.setFillColor(colors.HexColor("#0f172a"))
-    p.drawString(240, height - 335, latest_upload_metrics["estimated_bill"])
-    
+    p.drawString(240, height - 335, estimated_bill)
+
     p.setFillColor(colors.HexColor("#064e3b"))
     p.setFont("Helvetica-Bold", 11)
     p.drawString(60, height - 360, "Potential Monthly Savings:")
     p.setFont("Helvetica-Bold", 12)
     p.setFillColor(colors.HexColor("#10b981"))
     p.drawString(240, height - 360, "Rs. 870 / month")
-    
+
     p.setStrokeColor(colors.HexColor("#e2e8f0"))
     p.line(40, 70, width - 40, 70)
-    
+
     p.setFillColor(colors.HexColor("#64748b"))
     p.setFont("Helvetica-Oblique", 9)
     p.drawString(40, 50, "Generated automatically by EcoWatt AI System. Confidential Energy Audit Document.")
-    
+
     p.showPage()
     p.save()
-    
+
     buffer.seek(0)
-    
+
     return StreamingResponse(
-        buffer, 
-        media_type="application/pdf", 
+        buffer,
+        media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={report['filename']}"}
     )

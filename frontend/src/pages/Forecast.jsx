@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import PageHeader from '../components/ui/PageHeader';
 import Card from '../components/ui/Card';
-import { TrendingUp, Calendar, Zap, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, Calendar, Zap, ArrowUpRight, UploadCloud } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { fetchProphetForecast } from '../services/api';
 
 const Forecast = () => {
   const [forecastData, setForecastData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hasData, setHasData] = useState(true);
   const [totalPredicted, setTotalPredicted] = useState(0);
   const [dailyAvg, setDailyAvg] = useState(0);
   const [peakLoad, setPeakLoad] = useState(0);
@@ -17,7 +19,18 @@ const Forecast = () => {
       setLoading(true);
       // Fetching 30 days forecast from backend Prophet model
       const data = await fetchProphetForecast(30);
-      
+
+      // New users (or anyone who hasn't uploaded a dataset yet) get
+      // has_data: false from the backend — show an upload prompt instead
+      // of a generic, not-actually-personalized forecast.
+      if (!data || data.has_data === false) {
+        setHasData(false);
+        setLoading(false);
+        return;
+      }
+
+      setHasData(true);
+
       if (data && data.forecast_data) {
         // Map backend response for the chart
         const formattedData = data.forecast_data.map((item, index) => ({
@@ -51,6 +64,24 @@ const Forecast = () => {
         subtitle="AI-driven predictions for your next 30 days energy consumption patterns." 
       />
 
+      {!loading && !hasData ? (
+        <Card className="flex flex-col items-center justify-center text-center py-16">
+          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl mb-4">
+            <UploadCloud className="w-8 h-8" />
+          </div>
+          <h3 className="font-bold text-slate-100 text-lg mb-1">No forecast yet</h3>
+          <p className="text-xs text-slate-400 max-w-sm mb-6">
+            Upload your smart meter data to get an AI-powered 30-day energy consumption forecast personalized to your usage.
+          </p>
+          <Link
+            to="/upload"
+            className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm rounded-xl transition-colors"
+          >
+            Upload Your Data
+          </Link>
+        </Card>
+      ) : (
+        <>
       {/* Top Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <Card className="flex items-center justify-between">
@@ -132,6 +163,8 @@ const Forecast = () => {
           )}
         </div>
       </Card>
+        </>
+      )}
     </div>
   );
 };

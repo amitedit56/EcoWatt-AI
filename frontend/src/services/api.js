@@ -181,3 +181,34 @@ export const updateSettingsData = async (settingsData) => {
     return null;
   }
 };
+
+// Data Upload — file uploads need multipart/form-data, and the current
+// user's data (dashboard metrics, anomalies, history) is auto-scoped to
+// them server-side based on the auth token apiClient attaches.
+export const uploadDataset = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await apiClient.post('/api/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+export const fetchUploadHistory = async () => {
+  try {
+    const response = await apiClient.get('/api/upload-history');
+    return response.data.history;
+  } catch (error) {
+    console.error('Error fetching upload history:', error);
+    return [];
+  }
+};
+
+// Report PDF download — needs the auth token (apiClient attaches it
+// automatically) and a blob response type to receive binary PDF data.
+export const downloadReportFile = async (reportId) => {
+  const response = await apiClient.get(`/api/reports/download/${reportId}`, {
+    responseType: 'blob',
+  });
+  return response.data; // Blob
+};

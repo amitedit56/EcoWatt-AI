@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import PageHeader from '../components/ui/PageHeader';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { FileText, Download, Calendar, Loader2 } from 'lucide-react';
-import { fetchReportsData } from '../services/api';
+import { FileText, Download, Calendar, Loader2, FolderOpen } from 'lucide-react';
+import { fetchReportsData, downloadReportFile } from '../services/api';
 
 const Reports = () => {
   const [reportsList, setReportsList] = useState([]);
@@ -12,9 +12,7 @@ const Reports = () => {
 
   useEffect(() => {
     fetchReportsData().then((data) => {
-      if (data && data.length > 0) {
-        setReportsList(data);
-      }
+      setReportsList(data || []);
       setLoading(false);
     });
   }, []);
@@ -22,8 +20,7 @@ const Reports = () => {
   const handleDownload = async (reportId, filename) => {
     try {
       setDownloadingId(reportId);
-      const response = await fetch(`http://localhost:8000/api/reports/download/${reportId}`);
-      const blob = await response.blob();
+      const blob = await downloadReportFile(reportId);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -31,6 +28,7 @@ const Reports = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download failed:', error);
     } finally {
@@ -49,13 +47,23 @@ const Reports = () => {
       <Card className="flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <h3 className="font-bold text-slate-100 text-base mb-1">Generate Custom Report</h3>
-          <p className="text-xs text-slate-400">Export detailed analytics including anomaly logs and appliance breakdowns.</p>
+          <p className="text-xs text-slate-400">
+            {reportsList.length > 0
+              ? 'Export detailed analytics including anomaly logs and appliance breakdowns.'
+              : 'Upload a dataset first to generate your first report.'}
+          </p>
         </div>
-        <Button 
-          variant="primary" 
-          onClick={() => handleDownload(1, 'latest_energy_audit.pdf')}
+        <Button
+          variant="primary"
+          disabled={reportsList.length === 0 || downloadingId === reportsList[0]?.id}
+          onClick={() => reportsList[0] && handleDownload(reportsList[0].id, reportsList[0].filename)}
         >
-          <Download className="w-4 h-4" /> Download Latest PDF Report
+          {downloadingId === reportsList[0]?.id ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4" />
+          )}
+          Download Latest PDF Report
         </Button>
       </Card>
 
@@ -64,6 +72,14 @@ const Reports = () => {
         <h3 className="font-bold text-slate-100 text-base mb-4">Available Audit Reports</h3>
         {loading ? (
           <div className="text-center py-8 text-slate-400 text-xs">Loading audit reports...</div>
+        ) : reportsList.length === 0 ? (
+          <div className="text-center py-12">
+            <FolderOpen className="w-10 h-10 text-slate-700 mx-auto mb-3" />
+            <p className="text-slate-400 text-sm font-medium">No reports yet</p>
+            <p className="text-slate-500 text-xs mt-1">
+              Upload a dataset from the Data Upload page to generate your first audit report.
+            </p>
+          </div>
         ) : (
           <div className="space-y-3">
             {reportsList.map((report) => (

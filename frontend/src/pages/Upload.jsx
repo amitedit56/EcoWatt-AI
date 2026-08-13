@@ -2,39 +2,31 @@ import React, { useState, useRef, useEffect } from 'react';
 import PageHeader from '../components/ui/PageHeader';
 import Card from '../components/ui/Card';
 import { UploadCloud, FileSpreadsheet, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { uploadDataset, fetchUploadHistory } from '../services/api';
 
 const Upload = () => {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState(null);
-  
-  // Load history from localStorage or fallback to default
-  const [history, setHistory] = useState(() => {
-    const savedHistory = localStorage.getItem('ecoWatt_upload_history');
-    if (savedHistory) {
-      try {
-        return JSON.parse(savedHistory);
-      } catch (e) {
-        console.error("Failed to parse history", e);
-      }
-    }
-    return [
-      {
-        id: 1,
-        filename: 'meter_data_june_2026.csv',
-        date: '24 Jun 2026',
-        size: '1.2 MB',
-        status: 'Processed'
-      }
-    ];
-  });
-  
+
+  // History now comes from the backend, scoped to the logged-in user —
+  // no more localStorage (which leaked between different accounts sharing
+  // the same browser).
+  const [history, setHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
   const fileInputRef = useRef(null);
 
-  // Save history to localStorage whenever it changes
+  const loadHistory = async () => {
+    setLoadingHistory(true);
+    const data = await fetchUploadHistory();
+    setHistory(data || []);
+    setLoadingHistory(false);
+  };
+
   useEffect(() => {
-    localStorage.setItem('ecoWatt_upload_history', JSON.stringify(history));
-  }, [history]);
+    loadHistory();
+  }, []);
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -64,34 +56,17 @@ const Upload = () => {
     setUploading(true);
     setMessage(null);
 
-    const formData = new FormData();
-    formData.append("file", file);
-
     try {
-      const response = await fetch("http://localhost:8000/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to upload dataset to backend.");
-      }
-
-      const data = await response.json();
-
-      const newEntry = {
-        id: Date.now(),
-        filename: file.name,
-        date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-        status: 'Processed'
-      };
-
-      setHistory([newEntry, ...history]);
+      const data = await uploadDataset(file);
       setMessage({ type: 'success', text: data.message || 'Dataset uploaded and processed successfully!' });
       setFile(null);
+      // Refresh history from the backend so it reflects the new upload
+      loadHistory();
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error connecting to backend server.' });
+      setMessage({
+        type: 'error',
+        text: error.response?.data?.detail || 'Error connecting to backend server.',
+      });
     } finally {
       setUploading(false);
     }
@@ -164,7 +139,17 @@ const Upload = () => {
       <Card>
         <h3 className="font-bold text-slate-100 text-base mb-4">Recent Upload History</h3>
         <div className="space-y-3">
-          {history.map((item) => (
+          {loadingHistory && (
+            <p className="text-slate-500 text-sm text-center py-6">Loading history...</p>
+          )}
+
+          {!loadingHistory && history.length === 0 && (
+            <p className="text-slate-500 text-sm text-center py-6">
+              No uploads yet. Your uploaded datasets will show up here.
+            </p>
+          )}
+
+          {!loadingHistory && history.map((item) => (
             <div key={item.id} className="flex items-center justify-between p-4 bg-slate-900/80 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl">

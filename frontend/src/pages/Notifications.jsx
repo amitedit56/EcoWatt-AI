@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, AlertTriangle, CheckCircle2, Eye, Filter, RefreshCw } from 'lucide-react';
-
-const API_BASE_URL = "http://localhost:8000";
+import { fetchAnomaliesData, updateAnomalyStatus } from '../services/api';
 
 const FILTERS = ["All", "Unresolved", "Reviewed", "Resolved"];
 
@@ -16,9 +15,8 @@ const Notifications = () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`${API_BASE_URL}/api/anomalies`);
-      if (!res.ok) throw new Error("Failed to fetch notifications");
-      const data = await res.json();
+      const data = await fetchAnomaliesData();
+      if (!data) throw new Error("Failed to fetch notifications");
       setNotifications(data.anomalies_list || []);
     } catch (err) {
       console.error(err);
@@ -35,12 +33,8 @@ const Notifications = () => {
   const updateStatus = async (id, newStatus) => {
     try {
       setUpdatingId(id);
-      const res = await fetch(`${API_BASE_URL}/api/anomalies/${id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (!res.ok) throw new Error("Status update failed");
+      const result = await updateAnomalyStatus(id, newStatus);
+      if (!result) throw new Error("Status update failed");
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, status: newStatus } : n))
       );
