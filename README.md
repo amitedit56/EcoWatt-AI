@@ -23,26 +23,26 @@ An end-to-end full-stack platform designed to analyze electricity consumption, d
 <div align="center">
 
 ### 📊 Main Dashboard & Real-Time Monitoring
-<img width="1895" height="861" alt="image" src="https://github.com/user-attachments/assets/d2ae1c40-e1b8-41a2-81f8-3d86d1a59a6e" />
+<img width="1896" height="863" alt="Screenshot 2026-08-14 212512" src="https://github.com/user-attachments/assets/d1f6e133-919d-4fda-bdb0-02a9ed819f22" />
 
-" alt="EcoWatt AI Dashboard" width="900" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" />
 
 <br/><br/>
 
 | 🤖 AI Anomaly Detection | 🔮 Predictive Forecasting |
 | :---: | :---: |
-| <img width="1895" height="856" alt="image" src="https://github.com/user-attachments/assets/d8e26e23-0775-4c17-a6ec-82ec633a1959" />
+| <img width="1914" height="855" alt="Screenshot 2026-08-14 212532" src="https://github.com/user-attachments/assets/c324d9bd-79d8-4287-ad3e-f6b6422daf0a" />
+| <img width="1897" height="860" alt="Screenshot 2026-08-14 212522" src="https://github.com/user-attachments/assets/8a1e88d8-86a6-4f1c-a16d-70e1f3769900" />
+| <img width="1896" height="859" alt="Screenshot 2026-08-14 212623" src="https://github.com/user-attachments/assets/af93bb6c-b6d4-416c-ab03-1f351bacb0af" />
+| <img width="1900" height="865" alt="Screenshot 2026-08-14 212632" src="https://github.com/user-attachments/assets/eb220034-53c3-4172-a205-1a010ab03f4b" />
 
-" alt="Anomaly Detection" width="440" /> | <img width="1899" height="866" alt="image" src="https://github.com/user-attachments/assets/4df664fd-32d9-48dc-9134-e8ea74e11e1c" /> | <img width="1896" height="857" alt="image" src="https://github.com/user-attachments/assets/1e408ed2-d41e-4a1c-a281-e5192b9175d9" /> | <img width="1896" height="851" alt="image" src="https://github.com/user-attachments/assets/fbb6714a-2538-4cf2-bafe-b3b9f613799c" />
 
 
-
-" alt="Energy Forecasting" width="440" /> |
-
-| 🔐 Authentication & Profile | 📈 Historical Analytics |
+| 🔐 Authentication & Profile | 📈 Historical Analytics | 
 | :---: | :---: |
-| <img src="<img width="1888" height="848" alt="image" src="https://github.com/user-attachments/assets/e20ce9e6-7fd0-45d6-bd0d-57ca65aa5648" />
-" alt="Authentication Flow" width="440" /> | <img src="assets/analytics-charts.png" alt="Analytics Charts" width="440" /> |
+| <img width="1888" height="848" alt="Screenshot 2026-08-14 211620" src="https://github.com/user-attachments/assets/8d5ca64d-251d-40c6-a087-26a358a63782" />
+| <img width="1910" height="856" alt="Screenshot 2026-08-14 212642" src="https://github.com/user-attachments/assets/10570a78-0c7d-43cb-a4f7-42135617e15f" />
+| <img width="1901" height="862" alt="Screenshot 2026-08-14 212649" src="https://github.com/user-attachments/assets/2e4d4537-dc80-443d-ad3a-11a3d8fdc1da" />
+
 
 </div>
 
