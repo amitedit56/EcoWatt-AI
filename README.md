@@ -18,6 +18,31 @@ An end-to-end full-stack platform designed to analyze electricity consumption, d
 
 ---
 
+## 📸 Screenshots & UI Preview
+
+<div align="center">
+
+### 📊 Main Dashboard & Real-Time Monitoring
+<img src="<img width="1892" height="854" alt="image" src="https://github.com/user-attachments/assets/b7e0878d-b31e-4f86-8f31-96fcf77cc950" />
+" alt="EcoWatt AI Dashboard" width="900" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" />
+
+<br/><br/>
+
+| 🤖 AI Anomaly Detection | 🔮 Predictive Forecasting |
+| :---: | :---: |
+| <img src="<img width="1899" height="862" alt="image" src="https://github.com/user-attachments/assets/16d4d2bc-86cd-443d-8cca-891ca54e540f" />
+" alt="Anomaly Detection" width="440" /> | <img src="<img width="1895" height="857" alt="image" src="https://github.com/user-attachments/assets/f933dc8d-4baa-42cf-b6fd-48d1229dc9fc" />
+" alt="Energy Forecasting" width="440" /> |
+
+| 🔐 Authentication & Profile | 📈 Historical Analytics |
+| :---: | :---: |
+| <img src="<img width="1888" height="848" alt="image" src="https://github.com/user-attachments/assets/e20ce9e6-7fd0-45d6-bd0d-57ca65aa5648" />
+" alt="Authentication Flow" width="440" /> | <img src="assets/analytics-charts.png" alt="Analytics Charts" width="440" /> |
+
+</div>
+
+---
+
 ## 🌐 Live Deployments & API Docs
 
 | Service | Platform | URL |
@@ -93,6 +118,11 @@ Traditional energy management often relies on delayed monthly utility bills with
 
 ```bash
 EcoWatt-AI/
+├── assets/                  # UI Screenshots & images for README
+│   ├── dashboard-preview.png
+│   ├── anomaly-detection.png
+│   ├── forecasting-analytics.png
+│   └── auth-screen.png
 ├── frontend/                # React + Vite application
 │   ├── public/              # Static assets
 │   ├── src/
@@ -200,3 +230,7 @@ Contributions are always welcome!
 5. Open a Pull Request
 
 ---
+
+## 📄 License
+
+Distributed under the **MIT License**. See `LICENSE` for more information.
