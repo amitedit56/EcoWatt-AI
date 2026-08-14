@@ -28,11 +28,11 @@ An end-to-end full-stack platform designed to analyze electricity consumption, d
 
 <br/><br/>
 
-| 🤖 AI Anomaly Detection | 🔮 Predictive Forecasting |
-| <img width="1914" height="855" alt="Screenshot 2026-08-14 212532" src="https://github.com/user-attachments/assets/c324d9bd-79d8-4287-ad3e-f6b6422daf0a" />
-| <img width="1897" height="860" alt="Screenshot 2026-08-14 212522" src="https://github.com/user-attachments/assets/8a1e88d8-86a6-4f1c-a16d-70e1f3769900" />
-| <img width="1896" height="859" alt="Screenshot 2026-08-14 212623" src="https://github.com/user-attachments/assets/af93bb6c-b6d4-416c-ab03-1f351bacb0af" />
-| <img width="1900" height="865" alt="Screenshot 2026-08-14 212632" src="https://github.com/user-attachments/assets/eb220034-53c3-4172-a205-1a010ab03f4b" />
+🤖 AI Anomaly Detection | 🔮 Predictive Forecasting
+<img width="1914" height="855" alt="Screenshot 2026-08-14 212532" src="https://github.com/user-attachments/assets/c324d9bd-79d8-4287-ad3e-f6b6422daf0a" />
+<img width="1897" height="860" alt="Screenshot 2026-08-14 212522" src="https://github.com/user-attachments/assets/8a1e88d8-86a6-4f1c-a16d-70e1f3769900" />
+<img width="1896" height="859" alt="Screenshot 2026-08-14 212623" src="https://github.com/user-attachments/assets/af93bb6c-b6d4-416c-ab03-1f351bacb0af" />
+ <img width="1900" height="865" alt="Screenshot 2026-08-14 212632" src="https://github.com/user-attachments/assets/eb220034-53c3-4172-a205-1a010ab03f4b" />
 
 </div>
 
