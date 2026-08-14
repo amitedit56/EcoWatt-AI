@@ -23,15 +23,20 @@ An end-to-end full-stack platform designed to analyze electricity consumption, d
 <div align="center">
 
 ### 📊 Main Dashboard & Real-Time Monitoring
-<img src="<img width="1892" height="854" alt="image" src="https://github.com/user-attachments/assets/b7e0878d-b31e-4f86-8f31-96fcf77cc950" />
+<img width="1895" height="861" alt="image" src="https://github.com/user-attachments/assets/d2ae1c40-e1b8-41a2-81f8-3d86d1a59a6e" />
+
 " alt="EcoWatt AI Dashboard" width="900" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" />
 
 <br/><br/>
 
 | 🤖 AI Anomaly Detection | 🔮 Predictive Forecasting |
 | :---: | :---: |
-| <img src="<img width="1899" height="862" alt="image" src="https://github.com/user-attachments/assets/16d4d2bc-86cd-443d-8cca-891ca54e540f" />
-" alt="Anomaly Detection" width="440" /> | <img src="<img width="1895" height="857" alt="image" src="https://github.com/user-attachments/assets/f933dc8d-4baa-42cf-b6fd-48d1229dc9fc" />
+| <img width="1895" height="856" alt="image" src="https://github.com/user-attachments/assets/d8e26e23-0775-4c17-a6ec-82ec633a1959" />
+
+" alt="Anomaly Detection" width="440" /> | <img width="1899" height="866" alt="image" src="https://github.com/user-attachments/assets/4df664fd-32d9-48dc-9134-e8ea74e11e1c" /> | <img width="1896" height="857" alt="image" src="https://github.com/user-attachments/assets/1e408ed2-d41e-4a1c-a281-e5192b9175d9" /> | <img width="1896" height="851" alt="image" src="https://github.com/user-attachments/assets/fbb6714a-2538-4cf2-bafe-b3b9f613799c" />
+
+
+
 " alt="Energy Forecasting" width="440" /> |
 
 | 🔐 Authentication & Profile | 📈 Historical Analytics |
