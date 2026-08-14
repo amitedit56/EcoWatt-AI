@@ -1,152 +1,202 @@
 # ⚡ EcoWatt AI
 
-> An AI-powered energy monitoring and efficiency platform that helps users understand electricity consumption, detect abnormal energy usage, and make smarter energy decisions.
+<div align="center">
 
-[![Live Demo](https://img.shields.io/badge/Live-Demo-00C853?style=for-the-badge)](https://eco-watt-ai-three.vercel.app)
+### *Smart Energy Monitoring & Machine Learning-Powered Anomaly Detection*
+
+An end-to-end full-stack platform designed to analyze electricity consumption, detect abnormal energy spikes, forecast future demand, and empower users to make data-driven, energy-efficient decisions.
+
+<br />
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-00C853?style=for-the-badge&logo=vercel&logoColor=white)](https://eco-watt-ai-three.vercel.app)
+[![API Status](https://img.shields.io/badge/API-Render-009688?style=for-the-badge&logo=render&logoColor=white)](https://ecowatt-ai.onrender.com/docs)
 [![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Database](https://img.shields.io/badge/Database-PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Deployment](https://img.shields.io/badge/Deployed-Vercel%20%2B%20Render-black?style=for-the-badge)](https://vercel.com/)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL%20(Neon)-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://neon.tech/)
+
+</div>
 
 ---
 
-## 🚀 Live Deployment
+## 🌐 Live Deployments & API Docs
 
-### 🌐 Frontend
-
-**EcoWatt AI Web Application**
-
-👉 https://eco-watt-ai-three.vercel.app
-
-### ⚙️ Backend API
-
-**FastAPI Backend**
-
-👉 https://ecowatt-ai.onrender.com
-
-### 📚 API Documentation
-
-Once the backend is running, FastAPI provides interactive API documentation:
-
-- Swagger UI: `https://ecowatt-ai.onrender.com/docs`
-- ReDoc: `https://ecowatt-ai.onrender.com/redoc`
-
-> Replace the backend URL above if your Render service uses a different URL.
+| Service | Platform | URL |
+| :--- | :--- | :--- |
+| **Frontend Web App** | Vercel | [eco-watt-ai-three.vercel.app](https://eco-watt-ai-three.vercel.app) |
+| **Backend REST API** | Render | [ecowatt-ai.onrender.com](https://ecowatt-ai.onrender.com) |
+| **Interactive API Docs** | Swagger UI | [ecowatt-ai.onrender.com/docs](https://ecowatt-ai.onrender.com/docs) |
+| **Alternative Docs** | ReDoc | [ecowatt-ai.onrender.com/redoc](https://ecowatt-ai.onrender.com/redoc) |
 
 ---
 
-# 🌱 About EcoWatt AI
+## 💡 About EcoWatt AI
 
-**EcoWatt AI** is a full-stack AI-powered energy monitoring application designed to help users analyze electricity consumption and improve energy efficiency.
+Traditional energy management often relies on delayed monthly utility bills with zero actionable insights. **EcoWatt AI** bridges this gap by combining modern cloud infrastructure with Machine Learning algorithms:
 
-The platform combines a modern React frontend, FastAPI backend, PostgreSQL database, authentication, analytics, and machine-learning-based anomaly detection to provide an interactive energy management experience.
-
-### 🎯 Main Goals
-
-- Monitor energy consumption
-- Analyze electricity usage patterns
-- Detect abnormal consumption
-- Provide data-driven energy insights
-- Help users identify inefficient energy usage
-- Visualize energy-related data through interactive dashboards
-- Provide secure user authentication
+- **Real-Time Analytics:** Continuous tracking of load profiles, active metrics, and peak usage periods.
+- **Intelligent Anomaly Detection:** Automated isolation of irregular power spikes, unexpected baseline loads, or faulty equipment patterns.
+- **Predictive Forecasting:** Historical time-series models estimating upcoming power usage to prevent surprise billings.
 
 ---
 
-# ✨ Features
+## ✨ Key Features
 
-## 📊 Energy Dashboard
-
-- Interactive energy consumption dashboard
-- Consumption statistics
-- Energy usage trends
-- Data visualization
-- Dynamic dashboard information
-
----
-
-## 🤖 AI-Powered Anomaly Detection
-
-EcoWatt AI uses machine learning to identify unusual energy consumption patterns.
-
-The system can help detect:
-
-- Unexpected spikes in consumption
-- Unusual usage patterns
-- Potential energy inefficiencies
-- Abnormal consumption behavior
+- 📊 **Dynamic Energy Dashboard:** Real-time visualization of consumption metrics, trends, and aggregate consumption statistics.
+- 🤖 **AI-Driven Anomaly Detection:** Identifies statistical outliers and abnormal spikes across usage patterns using machine learning.
+- 🔮 **Energy Forecasting:** Employs time-series forecasting (e.g., Prophet / regression models) for accurate future consumption projections.
+- 🔐 **Robust Authentication:** Secure JWT-based auth flow, email/password registration, password recovery, and Google OAuth integration.
+- 📈 **Interactive Visualizations:** Sleek charts for day/week/month comparisons, peak load tracking, and historical metrics.
+- 🎨 **Modern Dark-Themed UI:** Built with clean component hierarchy, modern cards, and full responsive support across desktop and mobile.
 
 ---
 
-## 🔮 Energy Forecasting
+## 🛠️ Tech Stack
 
-The application includes forecasting functionality to analyze historical energy data and estimate future consumption trends.
-
----
-
-## 🔐 Authentication
-
-Secure authentication system with:
-
-- User registration
-- Email/password login
-- JWT-based authentication
-- Password reset functionality
-- Google Sign-In
-- Protected dashboard routes
+| Layer | Technologies |
+| :--- | :--- |
+| **Frontend** | React 18, Vite, Tailwind CSS, Lucide Icons, Chart.js / Recharts |
+| **Backend** | Python 3.10+, FastAPI, Uvicorn, Pydantic, SQLAlchemy |
+| **Machine Learning** | Scikit-Learn, Facebook Prophet, Pandas, NumPy |
+| **Database & Auth** | PostgreSQL (Neon Serverless), OAuth 2.0 / JWT |
+| **Deployment** | Vercel (Frontend), Render (Backend) |
 
 ---
 
-## 📈 Analytics
-
-- Energy consumption analysis
-- Historical data visualization
-- Usage trends
-- Energy statistics
-- Interactive charts
-
----
-
-## 🎨 Modern UI
-
-- Responsive dashboard
-- Dark-themed interface
-- Modern card-based layout
-- Interactive components
-- Responsive navigation
-- Clean and minimal design
-
----
-
-# 🏗️ System Architecture
+## 🏗️ System Architecture
 
 ```text
-                    ┌─────────────────────┐
-                    │        User         │
-                    │     Web Browser     │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │    React + Vite     │
-                    │      Frontend       │
-                    │       Vercel        │
-                    └──────────┬──────────┘
-                               │
-                         REST API / HTTP
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │       FastAPI       │
-                    │       Backend       │
-                    │       Render        │
-                    └──────┬───────┬──────┘
-                           │       │
-                  ┌────────┘       └─────────┐
-                  ▼                          ▼
-        ┌─────────────────┐        ┌─────────────────┐
-        │   PostgreSQL    │        │    ML Models    │
-        │      Neon       │        │                 │
-        │                 │        │ Anomaly Model  │
-        └─────────────────┘        │ Prophet Model  │
-                                   └─────────────────┘
+ ┌─────────────────────────────────────────────────────────┐
+ │                       Client Layer                      │
+ │               React + Vite SPA (Vercel)                 │
+ └────────────────────────────┬────────────────────────────┘
+                              │
+                        REST API (HTTPS)
+                              │
+ ┌────────────────────────────▼────────────────────────────┐
+ │                     Application Layer                   │
+ │                     FastAPI (Render)                    │
+ └──────────────┬───────────────────────────┬──────────────┘
+                │                           │
+         Async Queries               Inference Calls
+                │                           │
+ ┌──────────────▼──────────┐ ┌──────────────▼──────────────┐
+ │      Database Layer     │ │          ML Engine          │
+ │   PostgreSQL (Neon)     │ │  • Anomaly Detector (ML)    │
+ │  • User Auth & Profiles │ │  • Prophet Time-Series      │
+ │  • Energy Time-Series   │ │    Forecasting              │
+ └─────────────────────────┘ └─────────────────────────────┘
+```
+
+---
+
+## 📂 Project Structure
+
+```bash
+EcoWatt-AI/
+├── frontend/                # React + Vite application
+│   ├── public/              # Static assets
+│   ├── src/
+│   │   ├── components/      # Reusable UI widgets & charts
+│   │   ├── pages/           # Dashboard, Analytics, Login, Register
+│   │   ├── services/        # API client & axios instances
+│   │   └── App.jsx
+│   └── package.json
+│
+├── backend/                 # FastAPI service
+│   ├── app/
+│   │   ├── api/             # Route handlers (auth, energy, ml)
+│   │   ├── core/            # Configs, DB sessions, security
+│   │   ├── ml_models/       # Model artifacts & inference scripts
+│   │   ├── models/          # SQLAlchemy database models
+│   │   └── schemas/         # Pydantic validation schemas
+│   ├── requirements.txt
+│   └── main.py
+└── README.md
+```
+
+---
+
+## 🚀 Getting Started (Local Setup)
+
+### Prerequisites
+- Node.js (v18+) & npm/yarn
+- Python (v3.10+) & pip
+- PostgreSQL instance (local or hosted like Neon)
+
+---
+
+### 1. Backend Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/eco-watt-ai.git
+cd eco-watt-ai/backend
+
+# Create and activate virtual environment
+python -m venv venv
+# On Windows:
+venv\Scripts\activate
+# On Linux/macOS:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create .env file
+cp .env.example .env
+
+# Run FastAPI development server
+uvicorn main:app --reload --port 8000
+```
+
+> Backend will start at: `http://localhost:8000` (API Docs at `http://localhost:8000/docs`)
+
+---
+
+### 2. Frontend Setup
+
+```bash
+cd ../frontend
+
+# Install dependencies
+npm install
+
+# Create .env file
+cp .env.example .env
+
+# Start development server
+npm run dev
+```
+
+> Frontend will start at: `http://localhost:5173`
+
+---
+
+## ⚙️ Environment Variables
+
+### Backend (`backend/.env`)
+```env
+DATABASE_URL=postgresql://user:password@host/database_name
+SECRET_KEY=your_super_secret_jwt_key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+FRONTEND_URL=http://localhost:5173
+```
+
+### Frontend (`frontend/.env`)
+```env
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are always welcome!
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
