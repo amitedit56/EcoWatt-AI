@@ -34,14 +34,6 @@ An end-to-end full-stack platform designed to analyze electricity consumption, d
 | <img width="1896" height="859" alt="Screenshot 2026-08-14 212623" src="https://github.com/user-attachments/assets/af93bb6c-b6d4-416c-ab03-1f351bacb0af" />
 | <img width="1900" height="865" alt="Screenshot 2026-08-14 212632" src="https://github.com/user-attachments/assets/eb220034-53c3-4172-a205-1a010ab03f4b" />
 
-
-
-| 🔐 Authentication & Profile | 📈 Historical Analytics | 
-| <img width="1888" height="848" alt="Screenshot 2026-08-14 211620" src="https://github.com/user-attachments/assets/8d5ca64d-251d-40c6-a087-26a358a63782" />
-| <img width="1910" height="856" alt="Screenshot 2026-08-14 212642" src="https://github.com/user-attachments/assets/10570a78-0c7d-43cb-a4f7-42135617e15f" />
-| <img width="1901" height="862" alt="Screenshot 2026-08-14 212649" src="https://github.com/user-attachments/assets/2e4d4537-dc80-443d-ad3a-11a3d8fdc1da" />
-
-
 </div>
 
 ---
